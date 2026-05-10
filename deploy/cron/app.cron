@@ -1,0 +1,5 @@
+# 每 5 分钟扫描课程提醒
+*/5 * * * * cd /app && python manage.py scan_course_reminders --settings=config.settings.prod >> /var/log/tutoring-course-reminders.log 2>&1
+
+# 每天 09:00 扫描待收款提醒
+0 9 * * * cd /app && python manage.py scan_receivable_reminders --settings=config.settings.prod >> /var/log/tutoring-receivable-reminders.log 2>&1

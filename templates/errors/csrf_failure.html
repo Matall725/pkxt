@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}请求已失效 - 家教/咨询排课与收款轻后台{% endblock %}
+
+{% block extra_head %}
+<style>
+    .error-shell { display: grid; place-items: center; min-height: calc(100vh - 120px); }
+    .error-card { width: min(720px, 100%); padding: 32px; }
+    .error-code {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: rgba(255, 107, 107, 0.12);
+        color: var(--red);
+        font-weight: 800;
+        margin-bottom: 16px;
+    }
+    .error-title { margin: 0; font-size: 1.6rem; font-weight: 800; }
+    .error-subtitle { margin: 10px 0 0; color: var(--text-soft); line-height: 1.8; }
+    .error-list {
+        margin: 20px 0 0;
+        padding: 18px 18px 18px 20px;
+        border-radius: 20px;
+        background: rgba(248, 250, 255, 0.88);
+        border: 1px solid rgba(152, 168, 204, 0.12);
+        color: var(--text-soft);
+    }
+    .error-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 22px; }
+    .error-reason {
+        margin-top: 18px;
+        font-size: 0.88rem;
+        color: var(--text-faint);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="error-shell">
+    <section class="board-card error-card">
+        <div class="error-code"><i class="bi bi-shield-exclamation"></i><span>403 请求已失效</span></div>
+        <h1 class="error-title">表单已经过期或页面不是最新状态</h1>
+        <p class="error-subtitle">
+            这通常不是权限问题，而是当前页面里的表单令牌已经失效。最常见的场景是：
+            登录后又回退到旧页面、服务重启后继续提交旧表单，或者同一个页面在别的标签页里已经重新登录过。
+        </p>
+
+        <div class="error-list">
+            <div>处理方式：</div>
+            <div>1. 先刷新当前页面，再重新提交。</div>
+            <div>2. 如果还是失败，关闭旧标签页，从登录页重新进入。</div>
+            <div>3. 本地使用时尽量固定使用同一个地址，例如一直用 `127.0.0.1:8000`，不要在 `localhost` 和 `127.0.0.1` 之间来回切换。</div>
+        </div>
+
+        <div class="error-actions">
+            <a class="primary-button" href="{% url 'login' %}"><i class="bi bi-box-arrow-in-right"></i><span>重新登录</span></a>
+            <a class="ghost-button" href="{{ request_path|default:'/' }}"><i class="bi bi-arrow-clockwise"></i><span>回到当前页</span></a>
+            <a class="ghost-button" href="{% url 'dashboard:home' %}"><i class="bi bi-house-door"></i><span>回工作台</span></a>
+        </div>
+
+        {% if reason %}
+            <div class="error-reason">系统原因：{{ reason }}</div>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}

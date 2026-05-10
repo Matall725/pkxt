@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}登录 - 家教/咨询排课与收款后台{% endblock %}
+
+{% block extra_head %}
+<style>
+    .login-shell { min-height: calc(100vh - 120px); display: grid; place-items: center; }
+    .login-card { width: min(460px, 100%); padding: 32px; }
+    .login-brand { display: flex; align-items: center; gap: 14px; margin-bottom: 24px; }
+    .login-brand__mark {
+        width: 48px;
+        height: 48px;
+        border-radius: 16px;
+        display: grid;
+        place-items: center;
+        color: #fff;
+        background: linear-gradient(135deg, #5ea8ff 0%, #2f6df6 100%);
+        box-shadow: 0 16px 28px rgba(47, 109, 246, 0.24);
+    }
+    .login-card p { color: var(--text3); }
+    .login-divider {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin: 18px 0 12px;
+        color: var(--text3);
+        font-size: 0.85rem;
+        font-weight: 700;
+    }
+    .login-divider::before,
+    .login-divider::after {
+        content: "";
+        flex: 1;
+        height: 1px;
+        background: rgba(152, 168, 204, 0.18);
+    }
+    .login-note { margin-top: 10px; font-size: 0.82rem; color: var(--text3); text-align: center; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="login-shell">
+    <div class="board-card login-card">
+        <div class="login-brand">
+            <div class="login-brand__mark"><i class="bi bi-journal-bookmark-fill"></i></div>
+            <div>
+                <h1 class="h3 mb-1 fw-bold">系统登录</h1>
+                <p class="mb-0">首版采用单账号模式，登录后可访问全部业务页面。</p>
+            </div>
+        </div>
+
+        <form method="post" class="board-card p-0 border-0 shadow-none bg-transparent">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit" class="primary-button w-100"><i class="bi bi-box-arrow-in-right"></i><span>登录</span></button>
+        </form>
+
+        {% if one_click_login_enabled %}
+            <div class="login-divider">本地快速入口</div>
+            <form method="post" action="{% url 'quick-login' %}" class="board-card p-0 border-0 shadow-none bg-transparent">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.GET.next|default:'' }}">
+                <button type="submit" class="ghost-button w-100"><i class="bi bi-lightning-charge"></i><span>本地一键登录</span></button>
+            </form>
+            <div class="login-note">仅在本地自检模式显示，正式环境默认关闭。</div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}家教/咨询排课与收款轻后台{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/htmx.org@1.9.12/dist/htmx.min.js"></script>
+    <style>
+        :root {
+            --brand: #2f6df6;
+            --brand-dark: #1d56d6;
+            --teal: #25b7b2;
+            --green: #14ae5c;
+            --orange: #ff9c2f;
+            --red: #ff6b6b;
+            --purple: #8b6cf7;
+            --line: rgba(152, 168, 204, 0.22);
+            --text-base: #182033;
+            --text-soft: #667394;
+            --text-faint: #8d97b1;
+            --surface: rgba(255, 255, 255, 0.84);
+            --surface-soft: rgba(248, 250, 255, 0.9);
+            --shadow: 0 18px 36px rgba(60, 92, 160, 0.08);
+            --shadow-xl: 0 36px 80px rgba(44, 70, 134, 0.16);
+            --text: var(--text-base);
+            --text2: var(--text-soft);
+            --text3: var(--text-faint);
+            --blue: var(--brand);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            color: var(--text-base);
+            min-height: 100vh;
+            font-family: "Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif;
+            background:
+                radial-gradient(circle at top left, rgba(98, 145, 255, 0.18), transparent 28%),
+                radial-gradient(circle at top right, rgba(255, 198, 112, 0.16), transparent 24%),
+                linear-gradient(180deg, #eef3ff 0%, #f8fbff 100%);
+        }
+
+        a { text-decoration: none; color: inherit; }
+
+        .workspace-shell {
+            width: min(1500px, calc(100vw - 32px));
+            min-height: calc(100vh - 48px);
+            margin: 24px auto;
+            display: grid;
+            grid-template-columns: 240px minmax(0, 1fr);
+            background: rgba(255, 255, 255, 0.72);
+            border: 1px solid rgba(255, 255, 255, 0.7);
+            border-radius: 30px;
+            overflow: hidden;
+            box-shadow: var(--shadow-xl);
+            backdrop-filter: blur(18px);
+        }
+
+        .shell-sidebar {
+            padding: 28px 18px 18px;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.84) 0%, rgba(244, 247, 255, 0.92) 100%);
+            border-right: 1px solid var(--line);
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .brand-lockup {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 10px 10px 14px;
+        }
+
+        .brand-mark {
+            width: 44px;
+            height: 44px;
+            border-radius: 14px;
+            display: grid;
+            place-items: center;
+            color: #fff;
+            background: linear-gradient(135deg, #5ea8ff 0%, #2f6df6 72%);
+            box-shadow: 0 14px 24px rgba(47, 109, 246, 0.24);
+            font-size: 1.2rem;
+        }
+
+        .brand-copy strong {
+            display: block;
+            font-size: 1.02rem;
+            line-height: 1.35;
+        }
+
+        .brand-copy span {
+            font-size: 0.82rem;
+            color: var(--text-faint);
+        }
+
+        .side-nav {
+            display: grid;
+            gap: 6px;
+        }
+
+        .side-nav__link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 14px;
+            border-radius: 16px;
+            color: var(--text-soft);
+            font-weight: 700;
+            transition: 0.2s ease;
+        }
+
+        .side-nav__link:hover {
+            background: rgba(47, 109, 246, 0.08);
+            color: var(--brand);
+        }
+
+        .side-nav__link.is-active {
+            color: var(--brand);
+            background: linear-gradient(180deg, rgba(47, 109, 246, 0.12) 0%, rgba(47, 109, 246, 0.08) 100%);
+        }
+
+        .side-nav__link i {
+            width: 18px;
+            text-align: center;
+        }
+
+        .nav-badge {
+            margin-left: auto;
+            min-width: 22px;
+            height: 22px;
+            border-radius: 999px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 7px;
+            font-size: 0.75rem;
+            font-weight: 800;
+            background: rgba(255, 107, 107, 0.14);
+            color: var(--red);
+        }
+
+        .plan-card {
+            margin-top: auto;
+            padding: 18px;
+            border-radius: 20px;
+            background: linear-gradient(180deg, rgba(244, 247, 255, 0.96) 0%, rgba(255, 255, 255, 0.9) 100%);
+            border: 1px solid var(--line);
+        }
+
+        .plan-card__title {
+            font-weight: 800;
+        }
+
+        .plan-card__meta {
+            margin-top: 4px;
+            font-size: 0.88rem;
+            color: var(--text-faint);
+        }
+
+        .ghost-button,
+        .primary-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            border-radius: 14px;
+            padding: 10px 14px;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+
+        .ghost-button {
+            border: 1px solid rgba(47, 109, 246, 0.18);
+            background: rgba(47, 109, 246, 0.08);
+            color: var(--brand);
+        }
+
+        .primary-button {
+            border: none;
+            background: linear-gradient(135deg, #3381ff 0%, var(--brand-dark) 100%);
+            color: #fff;
+            box-shadow: 0 16px 30px rgba(47, 109, 246, 0.22);
+        }
+
+        .shell-main {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.58) 0%, rgba(248, 251, 255, 0.94) 100%);
+        }
+
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 18px;
+            padding: 26px 28px 14px;
+        }
+
+        .topbar__eyebrow {
+            margin-bottom: 4px;
+            font-size: 0.82rem;
+            font-weight: 800;
+            color: var(--text-faint);
+        }
+
+        .topbar__title {
+            margin: 0;
+            font-size: clamp(1.9rem, 2vw, 2.45rem);
+            line-height: 1.1;
+            font-weight: 800;
+        }
+
+        .topbar__subtitle {
+            margin-top: 6px;
+            color: var(--text-soft);
+            font-size: 0.94rem;
+        }
+
+        .topbar__actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 0;
+        }
+
+        .shell-search {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: min(360px, 38vw);
+            padding: 0 16px;
+            height: 54px;
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.85);
+            border: 1px solid var(--line);
+            box-shadow: var(--shadow);
+        }
+
+        .shell-search i { color: var(--text-faint); }
+
+        .shell-search input {
+            flex: 1;
+            border: none;
+            outline: none;
+            background: transparent;
+            color: var(--text-base);
+            font-size: 0.95rem;
+        }
+
+        .shell-search__hotkey {
+            padding: 4px 7px;
+            border-radius: 10px;
+            background: #f6f8fd;
+            color: var(--text-faint);
+            font-size: 0.75rem;
+            font-weight: 800;
+        }
+
+        .icon-action {
+            position: relative;
+            width: 46px;
+            height: 46px;
+            border-radius: 16px;
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, 0.86);
+            display: grid;
+            place-items: center;
+            color: var(--text-soft);
+            box-shadow: var(--shadow);
+        }
+
+        .icon-action__badge {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            min-width: 20px;
+            height: 20px;
+            padding: 0 6px;
+            border-radius: 999px;
+            background: var(--red);
+            color: #fff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: 800;
+        }
+
+        .profile-pill {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 7px 12px 7px 8px;
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.88);
+            border: 1px solid var(--line);
+            box-shadow: var(--shadow);
+            font-weight: 800;
+        }
+
+        .profile-pill__avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            color: #fff;
+            background: linear-gradient(135deg, #ffb18c 0%, #f06e78 100%);
+            font-size: 0.95rem;
+        }
+
+        .shell-content {
+            flex: 1;
+            padding: 6px 28px 28px;
+        }
+
+        .shell-alerts {
+            display: grid;
+            gap: 10px;
+            margin-bottom: 18px;
+        }
+
+        .shell-alert {
+            padding: 13px 16px;
+            border-radius: 16px;
+            border: 1px solid rgba(47, 109, 246, 0.12);
+            background: rgba(47, 109, 246, 0.08);
+            color: var(--text-soft);
+        }
+
+        .board-card,
+        .content-card,
+        .metric-card {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: 24px;
+            box-shadow: var(--shadow);
+        }
+
+        .badge-soft,
+        .pill-chip,
+        .lesson-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: rgba(47, 109, 246, 0.1);
+            color: var(--brand);
+            font-size: 0.8rem;
+            font-weight: 800;
+        }
+
+        .panel-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .panel-head h2 {
+            margin: 0;
+            font-size: 1.16rem;
+            font-weight: 800;
+        }
+
+        .panel-head p,
+        .section-card__meta {
+            margin: 3px 0 0;
+            font-size: 0.88rem;
+            color: var(--text-faint);
+        }
+
+        .panel-link,
+        .section-link {
+            color: var(--brand);
+            font-size: 0.9rem;
+            font-weight: 800;
+        }
+
+        .table-shell {
+            width: 100%;
+            overflow: auto;
+            border-radius: 18px;
+            border: 1px solid rgba(152, 168, 204, 0.12);
+        }
+
+        .table-shell table {
+            width: 100%;
+            margin: 0;
+            background: transparent;
+        }
+
+        .table-shell thead th {
+            padding: 14px 16px;
+            font-size: 0.82rem;
+            color: var(--text-faint);
+            font-weight: 800;
+            background: rgba(247, 249, 255, 0.92);
+            border-bottom: 1px solid rgba(152, 168, 204, 0.12);
+            white-space: nowrap;
+        }
+
+        .table-shell tbody td {
+            padding: 14px 16px;
+            vertical-align: middle;
+            border-bottom: 1px solid rgba(152, 168, 204, 0.12);
+            color: var(--text-soft);
+        }
+
+        .table-shell tbody tr:last-child td { border-bottom: none; }
+
+        .board-card .form-control,
+        .board-card .form-select,
+        .board-card textarea,
+        .board-card input[type="text"],
+        .board-card input[type="search"],
+        .board-card input[type="number"],
+        .board-card input[type="date"],
+        .board-card input[type="datetime-local"],
+        .board-card input[type="email"],
+        .board-card input[type="password"],
+        .board-card select {
+            border-radius: 16px;
+            border: 1px solid var(--line);
+            background: rgba(248, 250, 255, 0.86);
+            min-height: 48px;
+            box-shadow: none;
+            color: var(--text-base);
+        }
+
+        .board-card textarea { min-height: 120px; }
+
+        .status-pill,
+        .mini-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 74px;
+            padding: 7px 10px;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 800;
+        }
+
+        .status-pill.green,
+        .mini-badge.is-green { color: var(--green); background: rgba(20, 174, 92, 0.12); }
+        .status-pill.blue,
+        .mini-badge.is-blue { color: var(--brand); background: rgba(47, 109, 246, 0.12); }
+        .status-pill.orange,
+        .mini-badge.is-orange { color: #d98917; background: rgba(255, 156, 47, 0.12); }
+        .status-pill.gray,
+        .mini-badge.is-gray { color: var(--text-faint); background: rgba(141, 151, 177, 0.14); }
+        .status-pill.red,
+        .mini-badge.is-red { color: var(--red); background: rgba(255, 107, 107, 0.12); }
+
+        .mobile-tabbar { display: none; }
+
+        .auth-main {
+            width: min(1120px, calc(100vw - 32px));
+            margin: 32px auto;
+            min-height: calc(100vh - 64px);
+        }
+
+        @media (max-width: 1200px) {
+            .topbar { flex-direction: column; align-items: stretch; }
+            .topbar__actions { justify-content: space-between; flex-wrap: wrap; }
+            .shell-search { min-width: 0; flex: 1; }
+        }
+
+        @media (max-width: 991.98px) {
+            .workspace-shell {
+                width: 100%;
+                min-height: 100vh;
+                margin: 0;
+                border-radius: 0;
+                border: none;
+                grid-template-columns: 1fr;
+                box-shadow: none;
+            }
+
+            .shell-sidebar { display: none; }
+            .topbar { padding: 20px 18px 8px; }
+            .shell-content { padding: 10px 18px 98px; }
+            .topbar__actions { gap: 10px; }
+            .shell-search { min-width: 0; width: 100%; order: 3; }
+
+            .mobile-tabbar {
+                position: fixed;
+                left: 12px;
+                right: 12px;
+                bottom: 12px;
+                display: grid;
+                grid-template-columns: repeat(5, minmax(0, 1fr));
+                gap: 8px;
+                padding: 10px;
+                border-radius: 24px;
+                background: rgba(255, 255, 255, 0.9);
+                border: 1px solid rgba(255, 255, 255, 0.85);
+                box-shadow: var(--shadow-xl);
+                backdrop-filter: blur(20px);
+                z-index: 30;
+            }
+
+            .mobile-tabbar a {
+                display: grid;
+                justify-items: center;
+                gap: 4px;
+                padding: 8px 4px;
+                border-radius: 16px;
+                color: var(--text-faint);
+                font-size: 0.75rem;
+                font-weight: 800;
+            }
+
+            .mobile-tabbar a.is-active {
+                color: var(--brand);
+                background: rgba(47, 109, 246, 0.1);
+            }
+        }
+
+        @media (max-width: 575.98px) {
+            .topbar__title { font-size: 1.7rem; }
+            .topbar__actions { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; }
+            .profile-pill__label { display: none; }
+        }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+{% if user.is_authenticated %}
+<div class="workspace-shell">
+    <aside class="shell-sidebar">
+        <a class="brand-lockup" href="{% url 'dashboard:home' %}">
+            <span class="brand-mark"><i class="bi bi-journal-bookmark-fill"></i></span>
+            <span class="brand-copy">
+                <strong>家教/咨询排课与收款轻后台</strong>
+                <span>单账号工作室版本</span>
+            </span>
+        </a>
+
+        <nav class="side-nav">
+            <a class="side-nav__link {% if request.path == '/' %}is-active{% endif %}" href="{% url 'dashboard:home' %}">
+                <i class="bi bi-house-door"></i><span>工作台</span>
+            </a>
+            <a class="side-nav__link {% if '/students/' in request.path %}is-active{% endif %}" href="{% url 'students:list' %}">
+                <i class="bi bi-people"></i><span>学员管理</span>
+            </a>
+            <a class="side-nav__link {% if '/schedules/' in request.path %}is-active{% endif %}" href="{% url 'schedules:calendar' %}">
+                <i class="bi bi-calendar3"></i><span>排课日历</span>
+            </a>
+            <a class="side-nav__link {% if '/payments/' in request.path %}is-active{% endif %}" href="{% url 'payments:list' %}">
+                <i class="bi bi-wallet2"></i><span>收款管理</span>
+            </a>
+            <a class="side-nav__link {% if request.path == '/' %}is-active{% endif %}" href="{% url 'dashboard:home' %}#recent-notes">
+                <i class="bi bi-journal-text"></i><span>课后记录</span>
+            </a>
+            <a class="side-nav__link {% if '/reminders/' in request.path %}is-active{% endif %}" href="{% url 'reminders:center' %}">
+                <i class="bi bi-bell"></i><span>提醒中心</span>
+                {% if shell_pending_reminders %}<span class="nav-badge">{{ shell_pending_reminders }}</span>{% endif %}
+            </a>
+            <a class="side-nav__link {% if '/reports/' in request.path %}is-active{% endif %}" href="{% url 'dashboard:reports' %}">
+                <i class="bi bi-bar-chart"></i><span>报表中心</span>
+            </a>
+            <a class="side-nav__link {% if '/admin/' in request.path %}is-active{% endif %}" href="/admin/">
+                <i class="bi bi-gear"></i><span>设置</span>
+            </a>
+        </nav>
+
+        <div class="plan-card">
+            <div class="plan-card__title">标准版</div>
+            <div class="plan-card__meta">有效期：2025-12-31</div>
+            <a class="ghost-button w-100 mt-3" href="{% url 'dashboard:reports' %}">
+                <i class="bi bi-stars"></i><span>查看报表</span>
+            </a>
+        </div>
+    </aside>
+
+    <div class="shell-main">
+        <header class="topbar">
+            <div>
+                <div class="topbar__eyebrow">运营总览</div>
+                {% if request.path == '/' %}
+                    <h1 class="topbar__title">工作台</h1>
+                    <div class="topbar__subtitle">围绕学员、排课、收款、提醒和报表的日常运营视图。</div>
+                {% elif '/students/' in request.path %}
+                    <h1 class="topbar__title">学员管理</h1>
+                    <div class="topbar__subtitle">统一维护学员档案、服务方案与后续业务入口。</div>
+                {% elif '/schedules/' in request.path %}
+                    <h1 class="topbar__title">排课日历</h1>
+                    <div class="topbar__subtitle">安排课程、处理改期，并查看老师与学员冲突。</div>
+                {% elif '/payments/' in request.path %}
+                    <h1 class="topbar__title">收款管理</h1>
+                    <div class="topbar__subtitle">管理应收、实收流水与账款结清状态。</div>
+                {% elif '/reminders/' in request.path %}
+                    <h1 class="topbar__title">提醒中心</h1>
+                    <div class="topbar__subtitle">查看课程提醒、待收款提醒与处理状态。</div>
+                {% elif '/reports/' in request.path %}
+                    <h1 class="topbar__title">报表中心</h1>
+                    <div class="topbar__subtitle">导出学员、课时、收款与经营报表模板。</div>
+                {% else %}
+                    <h1 class="topbar__title">运营后台</h1>
+                    <div class="topbar__subtitle">单账号工作室日常使用界面。</div>
+                {% endif %}
+            </div>
+
+            <div class="topbar__actions">
+                <form class="shell-search" method="get" action="{% url 'students:list' %}">
+                    <i class="bi bi-search"></i>
+                    <input type="search" name="search" placeholder="搜索学员、课程、订单…" value="{{ request.GET.search|default:'' }}">
+                    <span class="shell-search__hotkey">⌘K</span>
+                </form>
+
+                <a class="icon-action" href="{% url 'reminders:center' %}" aria-label="提醒中心">
+                    <i class="bi bi-bell"></i>
+                    {% if shell_pending_reminders %}<span class="icon-action__badge">{{ shell_pending_reminders }}</span>{% endif %}
+                </a>
+
+                <a class="primary-button" href="{% url 'dashboard:reports' %}">
+                    <i class="bi bi-download"></i><span>报表导出</span>
+                </a>
+
+                <div class="profile-pill">
+                    <span class="profile-pill__avatar">{{ shell_user_label|first|default:"师" }}</span>
+                    <span class="profile-pill__label">{{ shell_user_label }}</span>
+                    <i class="bi bi-chevron-down text-secondary"></i>
+                </div>
+            </div>
+        </header>
+
+        <main class="shell-content">
+{% else %}
+        <main class="auth-main">
+{% endif %}
+            {% if messages %}
+                <div class="shell-alerts">
+                    {% for message in messages %}
+                        <div class="shell-alert">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            {% block content %}{% endblock %}
+        </main>
+
+{% if user.is_authenticated %}
+    </div>
+</div>
+
+<nav class="mobile-tabbar">
+    <a class="{% if request.path == '/' %}is-active{% endif %}" href="{% url 'dashboard:home' %}">
+        <i class="bi bi-house-door"></i><span>工作台</span>
+    </a>
+    <a class="{% if '/schedules/' in request.path %}is-active{% endif %}" href="{% url 'schedules:calendar' %}">
+        <i class="bi bi-calendar3"></i><span>日历</span>
+    </a>
+    <a class="{% if '/students/' in request.path %}is-active{% endif %}" href="{% url 'students:list' %}">
+        <i class="bi bi-people"></i><span>学员</span>
+    </a>
+    <a class="{% if '/reminders/' in request.path %}is-active{% endif %}" href="{% url 'reminders:center' %}">
+        <i class="bi bi-bell"></i><span>提醒</span>
+    </a>
+    <a class="{% if '/payments/' in request.path or '/reports/' in request.path %}is-active{% endif %}" href="{% url 'payments:list' %}">
+        <i class="bi bi-wallet2"></i><span>账款</span>
+    </a>
+</nav>
+{% endif %}
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

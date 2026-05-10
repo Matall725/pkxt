@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block title %}{% if mode == "create" %}新增应收{% else %}编辑应收{% endif %} - 家教/咨询排课与收款系统{% endblock %}
+
+{% block extra_head %}
+<style>
+    .receivable-form-page { display: grid; gap: 20px; }
+    .receivable-form-hero { padding: 24px; display: flex; align-items: end; justify-content: space-between; gap: 16px; }
+    .receivable-form-hero h2 { margin: 0; font-size: 1.3rem; font-weight: 800; }
+    .receivable-form-hero p { margin: 6px 0 0; color: var(--text-soft); }
+    .receivable-form-layout { display: grid; grid-template-columns: minmax(0, 1.1fr) 380px; gap: 20px; }
+    .receivable-form-panel { padding: 22px; }
+    .receivable-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+    .receivable-form-grid .span-2 { grid-column: span 2; }
+    .info-list { display: grid; gap: 10px; }
+    .info-row { display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 12px; padding: 12px 0; border-bottom: 1px dashed rgba(152, 168, 204, 0.16); }
+    .info-row:last-child { border-bottom: none; }
+    .entry-list { display: grid; gap: 10px; }
+    .entry-item { padding: 14px 16px; border-radius: 18px; background: rgba(248, 250, 255, 0.88); border: 1px solid rgba(152, 168, 204, 0.12); }
+    .entry-item__meta { color: var(--text-faint); font-size: 0.84rem; }
+    @media (max-width: 1200px) { .receivable-form-layout { grid-template-columns: 1fr; } }
+    @media (max-width: 768px) { .receivable-form-grid { grid-template-columns: 1fr; } .receivable-form-grid .span-2 { grid-column: auto; } }
+    @media (max-width: 575.98px) { .receivable-form-hero { flex-direction: column; align-items: stretch; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="receivable-form-page">
+    <section class="board-card receivable-form-hero">
+        <div>
+            <h2>{% if mode == "create" %}新增应收记录{% else %}编辑应收记录{% endif %}</h2>
+            <p>应收日期和到期日期会进入提醒生成规则。编辑页支持直接追加实收流水。</p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <a class="ghost-button" href="{% url 'payments:list' %}"><i class="bi bi-arrow-left"></i><span>返回列表</span></a>
+            {% if receivable %}
+                <a class="primary-button" href="{% url 'payments:entry-create' receivable.pk %}"><i class="bi bi-cash-stack"></i><span>新增实收流水</span></a>
+            {% endif %}
+        </div>
+    </section>
+
+    <section class="receivable-form-layout">
+        <article class="board-card receivable-form-panel">
+            <div class="panel-head">
+                <div>
+                    <h2>应收表单</h2>
+                    <p>{% if mode == "create" %}录入新的应收账款。{% else %}维护应收信息并补录新的实收流水。{% endif %}</p>
+                </div>
+                <span class="lesson-chip">{% if mode == "create" %}新建{% else %}编辑{% endif %}</span>
+            </div>
+
+            <form method="post" class="receivable-form-grid mt-3">
+                {% csrf_token %}
+                {% for field in form %}
+                    <div class="{% if field.name == 'title' or field.name == 'notes' %}span-2{% endif %}">
+                        <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field }}
+                        {% for error in field.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                    </div>
+                {% endfor %}
+                <div class="span-2 d-flex flex-wrap gap-2">
+                    <button class="primary-button" type="submit"><i class="bi bi-save2"></i><span>保存应收</span></button>
+                    <a class="ghost-button" href="{% url 'payments:list' %}">取消</a>
+                </div>
+            </form>
+        </article>
+
+        {% if receivable %}
+        <aside class="d-grid gap-4">
+            <article class="board-card receivable-form-panel">
+                <div class="panel-head">
+                    <div>
+                        <h2>账款概况</h2>
+                        <p>当前应收和实收汇总。</p>
+                    </div>
+                    {% if receivable.status == "paid" %}
+                        <span class="status-pill green">已收</span>
+                    {% elif receivable.status == "partial" %}
+                        <span class="status-pill orange">部分收款</span>
+                    {% else %}
+                        <span class="status-pill red">待收</span>
+                    {% endif %}
+                </div>
+                <div class="info-list mt-3">
+                    <div class="info-row"><strong>学员</strong><span>{{ receivable.student.name }}</span></div>
+                    <div class="info-row"><strong>应收</strong><span>¥ {{ receivable.amount_due }}</span></div>
+                    <div class="info-row"><strong>实收</strong><span>¥ {{ receivable.amount_received }}</span></div>
+                    <div class="info-row"><strong>未收</strong><span>¥ {{ receivable.outstanding_amount }}</span></div>
+                </div>
+            </article>
+
+            <article class="board-card receivable-form-panel">
+                <div class="panel-head">
+                    <div>
+                        <h2>快速录入实收</h2>
+                        <p>直接在当前页追加实收流水。</p>
+                    </div>
+                    <a class="panel-link" href="{% url 'payments:entry-create' receivable.pk %}">单独页面</a>
+                </div>
+                <form method="post" action="{% url 'payments:entry-create' receivable.pk %}" class="row g-3 mt-1">
+                    {% csrf_token %}
+                    {% for field in entry_form %}
+                        <div class="col-12">
+                            <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+                        </div>
+                    {% endfor %}
+                    <div class="col-12">
+                        <button class="ghost-button" type="submit"><i class="bi bi-plus-lg"></i><span>追加实收流水</span></button>
+                    </div>
+                </form>
+            </article>
+
+            <article class="board-card receivable-form-panel">
+                <div class="panel-head">
+                    <div>
+                        <h2>已记录流水</h2>
+                        <p>按录入时间展示。</p>
+                    </div>
+                    <span class="lesson-chip">{{ receivable.entries.count }} 笔</span>
+                </div>
+                <div class="entry-list mt-3">
+                    {% for entry in receivable.entries.all %}
+                        <div class="entry-item">
+                            <div class="fw-bold text-dark">¥ {{ entry.amount }} / {{ entry.get_method_display }}</div>
+                            <div class="entry-item__meta">{{ entry.received_at|date:"Y-m-d H:i" }}</div>
+                        </div>
+                    {% empty %}
+                        <div class="empty-state">当前还没有实收流水。</div>
+                    {% endfor %}
+                </div>
+            </article>
+        </aside>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}

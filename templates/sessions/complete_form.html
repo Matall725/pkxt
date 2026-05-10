@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}完成上课 - 家教/咨询排课与收款系统{% endblock %}
+
+{% block extra_head %}
+<style>
+    .simple-form-shell { display: grid; justify-content: center; }
+    .simple-form-card { width: min(820px, 100%); padding: 24px; }
+    .simple-form-card h2 { margin: 0; font-size: 1.3rem; font-weight: 800; }
+    .simple-form-card p { margin: 6px 0 0; color: var(--text-soft); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="simple-form-shell">
+    <section class="board-card simple-form-card">
+        <div class="panel-head">
+            <div>
+                <h2>完成上课</h2>
+                <p>{{ schedule.student.name }} / {{ schedule.service_plan.subject }} / {{ schedule.start_at|date:"Y-m-d H:i" }}</p>
+            </div>
+            <a class="ghost-button" href="{% url 'schedules:update' schedule.pk %}"><i class="bi bi-arrow-left"></i><span>返回排课</span></a>
+        </div>
+        <form method="post" class="row g-3 mt-2">
+            {% csrf_token %}
+            {% for field in form %}
+                <div class="col-12">
+                    <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                    {% for error in field.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                </div>
+            {% endfor %}
+            <div class="col-12 d-flex flex-wrap gap-2">
+                <button class="primary-button" type="submit"><i class="bi bi-save2"></i><span>保存完成记录</span></button>
+                <a class="ghost-button" href="{% url 'schedules:update' schedule.pk %}">取消</a>
+            </div>
+        </form>
+    </section>
+</div>
+{% endblock %}

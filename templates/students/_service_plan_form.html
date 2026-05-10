@@ -1,0 +1,31 @@
+<div class="border rounded-4 p-3 mb-3 service-plan-form" data-plan-form>
+    {% for hidden in form.hidden_fields %}
+        {{ hidden }}
+    {% endfor %}
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="h6 mb-0">服务方案</h3>
+        <button class="btn btn-outline-danger btn-sm js-remove-plan" type="button">移除</button>
+    </div>
+    <div class="row g-3">
+        {% for field in form.visible_fields %}
+            {% if field.name == "DELETE" %}
+                <div class="col-12">
+                    <div class="form-check">
+                        {{ field }}
+                        <label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    </div>
+                </div>
+            {% else %}
+                <div class="col-12 col-lg-6">
+                    <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+                    {% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+    {% for error in form.non_field_errors %}
+        <div class="text-danger small mt-2">{{ error }}</div>
+    {% endfor %}
+</div>

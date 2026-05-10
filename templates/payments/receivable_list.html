@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block title %}收款管理 - 家教/咨询排课与收款系统{% endblock %}
+
+{% block extra_head %}
+<style>
+    .receivable-page { display: grid; gap: 20px; }
+    .receivable-hero { padding: 24px; display: flex; align-items: end; justify-content: space-between; gap: 16px; }
+    .receivable-hero h2 { margin: 0; font-size: 1.3rem; font-weight: 800; }
+    .receivable-hero p { margin: 6px 0 0; color: var(--text-soft); }
+    .receivable-kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+    .receivable-kpi { padding: 20px; }
+    .receivable-kpi span { color: var(--text-faint); font-size: 0.88rem; font-weight: 700; }
+    .receivable-kpi strong { display: block; margin-top: 8px; font-size: 1.9rem; line-height: 1; }
+    .receivable-filter { padding: 22px; }
+    .receivable-filter__row { display: grid; grid-template-columns: 220px minmax(0, 1fr) auto; gap: 14px; align-items: end; }
+    .receivable-table { padding: 22px; }
+    .amount-strong { font-weight: 800; color: var(--text-base); }
+    @media (max-width: 991.98px) {
+        .receivable-kpis { grid-template-columns: 1fr; }
+        .receivable-filter__row { grid-template-columns: 1fr; }
+        .receivable-hero { flex-direction: column; align-items: stretch; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="receivable-page">
+    <section class="board-card receivable-hero">
+        <div>
+            <h2>收款管理</h2>
+            <p>按“1 条应收记录 + 多笔实收流水”管理账款，系统会根据实收自动驱动待收、部分收款和已收状态。</p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <a class="ghost-button" href="{% url 'dashboard:reports' %}"><i class="bi bi-download"></i><span>导出报表</span></a>
+            <a class="primary-button" href="{% url 'payments:create' %}"><i class="bi bi-plus-lg"></i><span>新增应收</span></a>
+        </div>
+    </section>
+
+    <section class="receivable-kpis">
+        <article class="board-card receivable-kpi">
+            <span>应收合计</span>
+            <strong>¥ {{ totals.total_due|default:0 }}</strong>
+        </article>
+        <article class="board-card receivable-kpi">
+            <span>实收合计</span>
+            <strong>¥ {{ totals.total_received|default:0 }}</strong>
+        </article>
+        <article class="board-card receivable-kpi">
+            <span>当前记录</span>
+            <strong>{{ receivables|length }}</strong>
+        </article>
+    </section>
+
+    <section class="board-card receivable-filter">
+        <form method="get" class="receivable-filter__row">
+            <div>
+                <label class="form-label" for="receivable-status">状态</label>
+                <select id="receivable-status" name="status" class="form-select">
+                    <option value="">全部</option>
+                    <option value="pending" {% if selected_status == "pending" %}selected{% endif %}>待收</option>
+                    <option value="partial" {% if selected_status == "partial" %}selected{% endif %}>部分收款</option>
+                    <option value="paid" {% if selected_status == "paid" %}selected{% endif %}>已收</option>
+                </select>
+            </div>
+            <div>
+                <label class="form-label" for="receivable-search">关键词</label>
+                <input id="receivable-search" type="text" name="search" value="{{ search }}" class="form-control" placeholder="按学员姓名或标题搜索">
+            </div>
+            <div class="d-flex gap-2">
+                <button class="primary-button" type="submit"><i class="bi bi-funnel"></i><span>筛选</span></button>
+                <a class="ghost-button" href="{% url 'payments:list' %}">重置</a>
+            </div>
+        </form>
+    </section>
+
+    <section class="board-card receivable-table">
+        <div class="panel-head">
+            <div>
+                <h2>应收记录</h2>
+                <p>点击编辑可进入该应收记录详情页，并继续录入实收流水。</p>
+            </div>
+            <span class="lesson-chip">结果 {{ receivables|length }} 条</span>
+        </div>
+        <div class="table-shell mt-3">
+            <table>
+                <thead>
+                    <tr>
+                        <th>学员</th>
+                        <th>标题</th>
+                        <th>应收</th>
+                        <th>实收</th>
+                        <th>未收</th>
+                        <th>状态</th>
+                        <th>到期日期</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for receivable in receivables %}
+                    <tr>
+                        <td>
+                            <div class="fw-bold text-dark">{{ receivable.student.name }}</div>
+                            <div class="small text-secondary">{{ receivable.service_plan.subject|default:"未绑定方案" }}</div>
+                        </td>
+                        <td>{{ receivable.title }}</td>
+                        <td><span class="amount-strong">¥ {{ receivable.amount_due }}</span></td>
+                        <td><span class="amount-strong">¥ {{ receivable.amount_received }}</span></td>
+                        <td><span class="amount-strong">¥ {{ receivable.outstanding_amount }}</span></td>
+                        <td>
+                            {% if receivable.status == "paid" %}
+                                <span class="status-pill green">已收</span>
+                            {% elif receivable.status == "partial" %}
+                                <span class="status-pill orange">部分收款</span>
+                            {% else %}
+                                <span class="status-pill red">待收</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ receivable.due_date|date:"Y-m-d" }}</td>
+                        <td><a class="ghost-button" href="{% url 'payments:update' receivable.pk %}">编辑</a></td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="8"><div class="empty-state">暂无符合筛选条件的应收记录。</div></td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+{% endblock %}

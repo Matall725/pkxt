@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}报表中心 - 家教/咨询排课与收款后台{% endblock %}
+
+{% block content %}
+<div class="d-grid gap-4">
+    <section class="board-card p-4 p-lg-5">
+        <h2 class="h3 fw-bold mb-2">报表中心</h2>
+        <p class="text-secondary mb-0">首版提供 CSV 导出和 Excel 报表模板下载，覆盖学员基础数据、应收数据、课时统计和经营收款视图。</p>
+    </section>
+
+    <div class="row g-4">
+        <div class="col-12 col-lg-6">
+            <section class="board-card p-4 h-100">
+                <h3 class="h4 fw-bold">CSV 导出</h3>
+                <p class="text-secondary">适合快速二次处理或导入其他系统。</p>
+                <div class="d-grid gap-2">
+                    <a class="ghost-button" href="{% url 'dashboard:export-students' %}"><i class="bi bi-filetype-csv"></i><span>导出学员清单</span></a>
+                    <a class="ghost-button" href="{% url 'dashboard:export-receivables' %}"><i class="bi bi-filetype-csv"></i><span>导出应收清单</span></a>
+                </div>
+            </section>
+        </div>
+        <div class="col-12 col-lg-6">
+            <section class="board-card p-4 h-100">
+                <h3 class="h4 fw-bold">Excel 报表模板</h3>
+                <p class="text-secondary">适合直接交付给运营或财务查看的固定模板。</p>
+                <div class="d-grid gap-2">
+                    <a class="primary-button" href="{% url 'dashboard:export-hours' %}"><i class="bi bi-file-earmark-spreadsheet"></i><span>下载学员课时报表</span></a>
+                    <a class="primary-button" href="{% url 'dashboard:export-finance' %}"><i class="bi bi-file-earmark-spreadsheet"></i><span>下载经营收款报表</span></a>
+                </div>
+            </section>
+        </div>
+    </div>
+</div>
+{% endblock %}

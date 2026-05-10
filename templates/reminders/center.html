@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block title %}提醒中心 - 家教/咨询排课与收款系统{% endblock %}
+
+{% block extra_head %}
+<style>
+    .reminder-page { display: grid; gap: 20px; }
+    .reminder-hero { padding: 24px; display: flex; align-items: end; justify-content: space-between; gap: 16px; }
+    .reminder-hero h2 { margin: 0; font-size: 1.3rem; font-weight: 800; }
+    .reminder-hero p { margin: 6px 0 0; color: var(--text-soft); }
+    .reminder-layout { display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 20px; }
+    .reminder-panel { padding: 22px; }
+    .reminder-count { display: inline-flex; align-items: center; justify-content: center; min-width: 32px; height: 32px; border-radius: 999px; background: rgba(47, 109, 246, 0.1); color: var(--brand); font-weight: 800; }
+    .task-title { font-weight: 800; color: var(--text-base); }
+    .task-message { margin-top: 4px; font-size: 0.86rem; color: var(--text-soft); }
+    @media (max-width: 1100px) { .reminder-layout { grid-template-columns: 1fr; } }
+    @media (max-width: 575.98px) { .reminder-hero { flex-direction: column; align-items: stretch; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="reminder-page">
+    <section class="board-card reminder-hero">
+        <div>
+            <h2>提醒中心</h2>
+            <p>首版仅覆盖课程提醒和待收款提醒，提醒状态只有“未完成”和“已完成”两种。</p>
+        </div>
+        <form method="post" action="{% url 'reminders:scan' %}">
+            {% csrf_token %}
+            <button class="primary-button" type="submit"><i class="bi bi-arrow-repeat"></i><span>立即扫描提醒</span></button>
+        </form>
+    </section>
+
+    <section class="reminder-layout">
+        <article class="board-card reminder-panel">
+            <div class="panel-head">
+                <div>
+                    <h2>提醒配置</h2>
+                    <p>调整课程提醒和待收款提醒的系统级规则。</p>
+                </div>
+                <span class="lesson-chip">系统配置</span>
+            </div>
+            <form method="post" class="row g-3 mt-1">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="save-config">
+                {% for field in form %}
+                    <div class="col-12">
+                        <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field }}
+                        {% for error in field.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                    </div>
+                {% endfor %}
+                <div class="col-12">
+                    <button class="ghost-button" type="submit"><i class="bi bi-check2-circle"></i><span>保存配置</span></button>
+                </div>
+            </form>
+        </article>
+
+        <article class="board-card reminder-panel">
+            <div class="panel-head">
+                <div>
+                    <h2>提醒任务</h2>
+                    <p>默认按状态和提醒时间排序显示。</p>
+                </div>
+                <span class="reminder-count">{{ tasks|length }}</span>
+            </div>
+            <div class="table-shell mt-3">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>类型</th>
+                            <th>提醒内容</th>
+                            <th>提醒时间</th>
+                            <th>状态</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for task in tasks %}
+                        <tr>
+                            <td>
+                                {% if task.reminder_type == "course" %}
+                                    <span class="status-pill blue">课程提醒</span>
+                                {% else %}
+                                    <span class="status-pill orange">待收款提醒</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="task-title">{{ task.title }}</div>
+                                <div class="task-message">{{ task.message }}</div>
+                            </td>
+                            <td>{{ task.remind_at|date:"Y-m-d H:i" }}</td>
+                            <td>
+                                {% if task.status == "done" %}
+                                    <span class="status-pill green">已完成</span>
+                                {% else %}
+                                    <span class="status-pill red">未完成</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if task.status == "pending" %}
+                                    <form method="post" action="{% url 'reminders:done' task.pk %}">
+                                        {% csrf_token %}
+                                        <button class="ghost-button" type="submit">标记完成</button>
+                                    </form>
+                                {% else %}
+                                    <span class="text-secondary small">已处理</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="5"><div class="empty-state">当前没有提醒任务。</div></td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </article>
+    </section>
+</div>
+{% endblock %}

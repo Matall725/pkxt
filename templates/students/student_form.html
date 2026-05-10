@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+
+{% block title %}{% if mode == "create" %}新增学员{% else %}编辑学员{% endif %} - 家教/咨询排课与收款后台{% endblock %}
+
+{% block extra_head %}
+<style>
+    .student-form-page { display:grid; grid-template-columns:minmax(0,1.1fr) 360px; gap:20px; }
+    .student-form-shell { padding:22px; }
+    .summary-stack { display:grid; gap:16px; }
+    .summary-card { padding:20px; }
+    @media (max-width: 1199.98px) { .student-form-page { grid-template-columns:1fr; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="student-form-page">
+    <div class="board-card student-form-shell">
+        <div class="panel-head mb-4">
+            <div>
+                <h2>{% if mode == "create" %}新增学员{% else %}编辑学员档案{% endif %}</h2>
+                <p>学员档案和服务方案放在同一页维护，录入完成后就能继续排课和收款。</p>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                <a class="ghost-button" href="{% url 'students:list' %}">返回列表</a>
+                {% if student %}
+                    <a class="ghost-button" href="{% url 'schedules:create' %}?student={{ student.pk }}{% if student.active_service_plan %}&service_plan={{ student.active_service_plan.pk }}{% endif %}">新增排课</a>
+                    <a class="ghost-button" href="{% url 'payments:create' %}?student={{ student.pk }}{% if student.active_service_plan %}&service_plan={{ student.active_service_plan.pk }}{% endif %}">新增应收</a>
+                {% endif %}
+            </div>
+        </div>
+
+        <form method="post">
+            {% csrf_token %}
+            <section class="mb-4">
+                <h3 class="h5 mb-3">基础信息</h3>
+                <div class="row g-3">
+                    {% for field in form %}
+                        <div class="col-12 {% if field.name != 'attention_note' %}col-lg-6{% endif %}">
+                            <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+                            {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+                            {% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                        </div>
+                    {% endfor %}
+                </div>
+                {% for error in form.non_field_errors %}
+                    <div class="text-danger small mt-2">{{ error }}</div>
+                {% endfor %}
+            </section>
+
+            <section>
+                <div class="panel-head mb-3">
+                    <div>
+                        <h3 class="h5 mb-1">服务方案</h3>
+                        <p class="section-card__meta mb-0">可以保留历史方案，但同一学员只能有一个生效中的方案。</p>
+                    </div>
+                    <button class="ghost-button" id="add-plan-button" type="button">新增方案行</button>
+                </div>
+                {{ service_plan_formset.management_form }}
+                {% for error in service_plan_formset.non_form_errors %}
+                    <div class="shell-alert mb-3">{{ error }}</div>
+                {% endfor %}
+                <div id="service-plan-forms">
+                    {% for plan_form in service_plan_formset.forms %}
+                        {% include "students/_service_plan_form.html" with form=plan_form %}
+                    {% endfor %}
+                </div>
+                <template id="service-plan-empty-form">
+                    {% include "students/_service_plan_form.html" with form=service_plan_formset.empty_form %}
+                </template>
+            </section>
+
+            <div class="d-flex flex-wrap gap-2 mt-4">
+                <button class="primary-button" type="submit"><i class="bi bi-check2-circle"></i><span>保存学员档案</span></button>
+                <a class="ghost-button" href="{% url 'students:list' %}">取消</a>
+            </div>
+        </form>
+    </div>
+
+    {% if student %}
+        <aside class="summary-stack">
+            <section class="board-card summary-card">
+                <h3 class="h5 mb-3">汇总</h3>
+                <div class="d-flex flex-wrap gap-2">
+                    <span class="badge-soft">排课 {{ summary.schedule_count }}</span>
+                    <span class="badge-soft">备注 {{ summary.note_count }}</span>
+                </div>
+                <div class="small text-secondary mt-3">
+                    <div>累计应收：{{ summary.receivable_due }}</div>
+                    <div>累计实收：{{ summary.receivable_received }}</div>
+                    <div>当前未收：{{ summary.receivable_outstanding }}</div>
+                </div>
+            </section>
+
+            <section class="board-card summary-card">
+                <div class="panel-head mb-3">
+                    <div><h3 class="h5 mb-0">最近排课</h3></div>
+                    <a class="panel-link" href="{% url 'schedules:create' %}?student={{ student.pk }}{% if student.active_service_plan %}&service_plan={{ student.active_service_plan.pk }}{% endif %}">继续排课</a>
+                </div>
+                <div class="list-group list-group-flush">
+                    {% for schedule in recent_schedules %}
+                        <a class="list-group-item list-group-item-action px-0" href="{% url 'schedules:update' schedule.pk %}">
+                            <div class="fw-semibold">{{ schedule.service_plan.subject }}</div>
+                            <div class="small text-secondary">{{ schedule.start_at|date:"Y-m-d H:i" }} / {{ schedule.title }}</div>
+                        </a>
+                    {% empty %}
+                        <div class="text-secondary">还没有排课记录。</div>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <section class="board-card summary-card">
+                <div class="panel-head mb-3">
+                    <div><h3 class="h5 mb-0">最近应收</h3></div>
+                    <a class="panel-link" href="{% url 'payments:create' %}?student={{ student.pk }}{% if student.active_service_plan %}&service_plan={{ student.active_service_plan.pk }}{% endif %}">登记应收</a>
+                </div>
+                <div class="list-group list-group-flush">
+                    {% for receivable in receivables %}
+                        <a class="list-group-item list-group-item-action px-0" href="{% url 'payments:update' receivable.pk %}">
+                            <div class="fw-semibold">{{ receivable.title }}</div>
+                            <div class="small text-secondary">应收 {{ receivable.amount_due }} / 已收 {{ receivable.amount_received }}</div>
+                        </a>
+                    {% empty %}
+                        <div class="text-secondary">还没有应收记录。</div>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <section class="board-card summary-card">
+                <h3 class="h5 mb-3">最近备注</h3>
+                <div class="list-group list-group-flush">
+                    {% for note in recent_notes %}
+                        <a class="list-group-item list-group-item-action px-0" href="{% url 'notes:update' note.pk %}">
+                            <div class="fw-semibold">{{ note.created_at|date:"Y-m-d H:i" }}</div>
+                            <div class="small text-secondary">{{ note.summary|truncatechars:60 }}</div>
+                        </a>
+                    {% empty %}
+                        <div class="text-secondary">还没有课后备注。</div>
+                    {% endfor %}
+                </div>
+            </section>
+        </aside>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    (() => {
+        const container = document.getElementById("service-plan-forms");
+        const addButton = document.getElementById("add-plan-button");
+        const totalForms = document.getElementById("id_plans-TOTAL_FORMS");
+        const template = document.getElementById("service-plan-empty-form");
+        if (!container || !addButton || !totalForms || !template) return;
+
+        addButton.addEventListener("click", () => {
+            const index = Number(totalForms.value);
+            const html = template.innerHTML.replaceAll("__prefix__", index);
+            container.insertAdjacentHTML("beforeend", html);
+            totalForms.value = index + 1;
+        });
+
+        document.addEventListener("click", (event) => {
+            const button = event.target.closest(".js-remove-plan");
+            if (!button) return;
+            const card = button.closest("[data-plan-form]");
+            if (!card) return;
+            const deleteInput = card.querySelector('input[type="checkbox"][name$="-DELETE"]');
+            if (deleteInput) deleteInput.checked = true;
+            card.classList.add("d-none");
+        });
+    })();
+</script>
+{% endblock %}

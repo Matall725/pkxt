@@ -1,0 +1,482 @@
+{% extends "base.html" %}
+
+{% block title %}工作台 - 家教/咨询排课与收款后台{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<style>
+    .dash-shell { display: grid; gap: 20px; }
+    .kpi-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px; }
+    .kpi-card { padding: 20px; display: grid; gap: 16px; }
+    .kpi-head, .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .kpi-head strong { font-size: 0.95rem; color: var(--text-base); }
+    .kpi-icon { width: 42px; height: 42px; border-radius: 14px; display: grid; place-items: center; font-size: 1rem; }
+    .kpi-icon.blue { background: rgba(47, 109, 246, 0.12); color: var(--brand); }
+    .kpi-icon.teal { background: rgba(37, 183, 178, 0.14); color: var(--teal); }
+    .kpi-icon.orange { background: rgba(255, 156, 47, 0.14); color: var(--orange); }
+    .kpi-icon.green { background: rgba(20, 174, 92, 0.14); color: var(--green); }
+    .kpi-icon.purple { background: rgba(139, 108, 247, 0.14); color: var(--purple); }
+    .kpi-value { font-size: 2rem; font-weight: 800; line-height: 1; }
+    .kpi-note { color: var(--text-base); font-size: 0.9rem; }
+    .kpi-note .up { color: var(--green); font-weight: 800; }
+    .kpi-note .down { color: var(--red); font-weight: 800; }
+
+    .shortcut-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 16px; }
+    .shortcut-card {
+        padding: 20px;
+        display: grid;
+        gap: 14px;
+        align-content: start;
+        min-height: 176px;
+    }
+    .shortcut-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 16px;
+        display: grid;
+        place-items: center;
+        font-size: 1.1rem;
+        color: #fff;
+    }
+    .shortcut-icon.blue { background: linear-gradient(135deg, #5ea8ff 0%, #2f6df6 100%); }
+    .shortcut-icon.teal { background: linear-gradient(135deg, #6fd7d1 0%, #25b7b2 100%); }
+    .shortcut-icon.orange { background: linear-gradient(135deg, #ffca76 0%, #ff9c2f 100%); }
+    .shortcut-icon.green { background: linear-gradient(135deg, #62d89b 0%, #14ae5c 100%); }
+    .shortcut-icon.purple { background: linear-gradient(135deg, #b7a1ff 0%, #8b6cf7 100%); }
+    .shortcut-title { font-size: 1rem; font-weight: 800; color: var(--text-base); }
+    .shortcut-desc { font-size: 0.88rem; line-height: 1.6; color: var(--text-soft); }
+    .shortcut-meta { font-size: 0.82rem; font-weight: 800; color: var(--text-faint); }
+    .shortcut-action { margin-top: auto; }
+    .shortcut-action form { margin: 0; }
+
+    .panel-grid { display: grid; grid-template-columns: 1.18fr 0.95fr; gap: 20px; }
+    .panel { padding: 22px; }
+    .panel-head h2 { margin: 0; font-size: 1.16rem; font-weight: 800; }
+    .panel-head p { margin: 4px 0 0; color: var(--text-soft); font-size: 0.88rem; }
+    .panel-link { color: var(--brand); font-size: 0.9rem; font-weight: 700; }
+
+    .lesson-list, .reminder-list { display: grid; gap: 12px; }
+    .lesson-row {
+        display: grid;
+        grid-template-columns: 76px 52px minmax(0, 1fr) auto;
+        gap: 14px;
+        align-items: center;
+        padding: 14px 16px;
+        border-radius: 18px;
+        background: rgba(248, 250, 255, 0.88);
+        border: 1px solid rgba(152, 168, 204, 0.12);
+    }
+    .lesson-time { font-weight: 800; color: var(--text-base); line-height: 1.5; }
+    .lesson-avatar {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        color: #fff;
+        font-weight: 800;
+        background: linear-gradient(135deg, #5ea8ff 0%, #2f6df6 100%);
+    }
+    .lesson-main { min-width: 0; }
+    .lesson-title { font-weight: 800; }
+    .lesson-meta { margin-top: 4px; color: var(--text-soft); font-size: 0.88rem; }
+    .lesson-chip {
+        display: inline-flex;
+        margin-top: 8px;
+        padding: 4px 8px;
+        border-radius: 999px;
+        background: rgba(47, 109, 246, 0.1);
+        color: var(--brand);
+        font-size: 0.76rem;
+        font-weight: 700;
+    }
+
+    .reminder-group + .reminder-group { margin-top: 18px; }
+    .reminder-group h3 { margin: 0 0 12px; font-size: 0.98rem; font-weight: 800; }
+    .reminder-row {
+        display: grid;
+        grid-template-columns: 70px minmax(0, 1fr) auto auto;
+        gap: 10px;
+        align-items: center;
+        padding: 10px 0;
+        border-bottom: 1px dashed rgba(152, 168, 204, 0.14);
+    }
+    .reminder-row:last-child { border-bottom: none; }
+    .reminder-time, .reminder-meta { font-size: 0.85rem; font-weight: 700; color: var(--text-base); }
+    .reminder-meta { color: #ff8a3d; }
+
+    .status-pill {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 74px;
+        padding: 7px 10px;
+        border-radius: 999px;
+        font-size: 0.8rem;
+        font-weight: 800;
+    }
+    .status-pill.green { color: var(--green); background: rgba(20, 174, 92, 0.12); }
+    .status-pill.blue { color: var(--brand); background: rgba(47, 109, 246, 0.12); }
+    .status-pill.orange { color: #d98917; background: rgba(255, 156, 47, 0.12); }
+    .status-pill.gray { color: var(--text-soft); background: rgba(141, 151, 177, 0.14); }
+    .status-pill.red { color: var(--red); background: rgba(255, 107, 107, 0.12); }
+
+    .panel-tabs { display: flex; gap: 16px; font-size: 0.9rem; font-weight: 700; color: var(--text-soft); }
+    .panel-tabs .active { color: var(--brand); }
+    .table-shell .name { font-weight: 800; }
+    .table-shell .sub { margin-top: 4px; font-size: 0.84rem; color: var(--text-soft); }
+
+    .chart-wrap { height: 300px; }
+    .chart-legend { display: flex; gap: 18px; margin-bottom: 8px; color: var(--text-base); font-size: 0.86rem; font-weight: 700; }
+    .chart-legend span::before {
+        content: "";
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        margin-right: 8px;
+    }
+    .chart-legend .due::before { background: #2f6df6; }
+    .chart-legend .paid::before { background: #14ae5c; }
+    .chart-legend .open::before { background: #ff9c2f; }
+
+    .bottom-grid { display: grid; grid-template-columns: 1fr 1.05fr; gap: 20px; }
+    .export-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+    .export-card { padding: 22px; display: flex; align-items: center; gap: 14px; }
+    .export-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 18px;
+        display: grid;
+        place-items: center;
+        color: #fff;
+        font-size: 1.2rem;
+    }
+    .export-icon.blue { background: linear-gradient(135deg, #5ea8ff 0%, #2f6df6 100%); }
+    .export-icon.green { background: linear-gradient(135deg, #7fe0bc 0%, #36b897 100%); }
+    .export-title { font-weight: 800; }
+    .export-desc { margin-top: 4px; color: var(--text-soft); font-size: 0.88rem; }
+
+    .note-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+    .note-card { padding: 18px; border-radius: 22px; border: 1px solid rgba(255, 255, 255, 0.6); }
+    .note-card.c1 { background: linear-gradient(180deg, rgba(215, 245, 244, 0.92) 0%, rgba(233, 250, 250, 0.92) 100%); }
+    .note-card.c2 { background: linear-gradient(180deg, rgba(226, 239, 255, 0.92) 0%, rgba(238, 246, 255, 0.92) 100%); }
+    .note-card.c3 { background: linear-gradient(180deg, rgba(224, 248, 238, 0.92) 0%, rgba(238, 252, 246, 0.92) 100%); }
+    .note-card.c4 { background: linear-gradient(180deg, rgba(241, 232, 255, 0.92) 0%, rgba(248, 242, 255, 0.92) 100%); }
+    .note-label { display: inline-flex; gap: 8px; align-items: center; margin-bottom: 12px; font-size: 0.86rem; font-weight: 800; color: var(--text-base); }
+    .note-title { font-weight: 800; margin-bottom: 8px; }
+    .note-text { min-height: 72px; font-size: 0.88rem; line-height: 1.6; color: var(--text-base); }
+    .note-meta { margin-top: 14px; font-size: 0.82rem; color: var(--text-soft); font-weight: 700; }
+
+    .empty-state {
+        padding: 24px 18px;
+        border-radius: 18px;
+        text-align: center;
+        color: var(--text-soft);
+        background: rgba(248, 250, 255, 0.72);
+        border: 1px dashed rgba(152, 168, 204, 0.18);
+    }
+
+    @media (max-width: 1400px) {
+        .kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        .shortcut-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    }
+    @media (max-width: 1200px) {
+        .panel-grid, .bottom-grid { grid-template-columns: 1fr; }
+        .note-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 768px) {
+        .kpi-grid, .shortcut-grid, .export-grid, .note-grid { grid-template-columns: 1fr; }
+        .lesson-row, .reminder-row { grid-template-columns: 1fr; }
+        .table-shell thead { display: none; }
+        .table-shell tbody, .table-shell tr, .table-shell td { display: block; width: 100%; }
+        .table-shell tbody tr { padding: 14px 16px; border-bottom: 1px solid rgba(152, 168, 204, 0.12); }
+        .table-shell tbody td { padding: 4px 0; border: none; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dash-shell">
+    <section class="kpi-grid">
+        <article class="board-card kpi-card">
+            <div class="kpi-head"><span class="kpi-icon blue"><i class="bi bi-calendar2-check"></i></span><strong>今日课程</strong></div>
+            <div class="kpi-value">{{ today_totals.all }}</div>
+            <div class="kpi-note">较昨日 <span class="{% if today_totals.delta >= 0 %}up{% else %}down{% endif %}">{% if today_totals.delta >= 0 %}+{% endif %}{{ today_totals.delta }}</span></div>
+        </article>
+        <article class="board-card kpi-card">
+            <div class="kpi-head"><span class="kpi-icon teal"><i class="bi bi-people"></i></span><strong>活跃学员</strong></div>
+            <div class="kpi-value">{{ active_students_count }}</div>
+            <div class="kpi-note">潜在线索 {{ lead_students_count }} 人</div>
+        </article>
+        <article class="board-card kpi-card">
+            <div class="kpi-head"><span class="kpi-icon orange"><i class="bi bi-coin"></i></span><strong>待收款金额</strong></div>
+            <div class="kpi-value">¥ {{ outstanding_total|floatformat:2 }}</div>
+            <div class="kpi-note">未结清应收 {{ open_receivables_count }} 笔</div>
+        </article>
+        <article class="board-card kpi-card">
+            <div class="kpi-head"><span class="kpi-icon green"><i class="bi bi-cash-stack"></i></span><strong>本月已收</strong></div>
+            <div class="kpi-value">¥ {{ month_received_total|floatformat:2 }}</div>
+            <div class="kpi-note">本月到账 {{ month_received_count }} 笔</div>
+        </article>
+        <article class="board-card kpi-card">
+            <div class="kpi-head"><span class="kpi-icon purple"><i class="bi bi-bell"></i></span><strong>待提醒事项</strong></div>
+            <div class="kpi-value">{{ pending_reminders_count }}</div>
+            <div class="kpi-note">课程提醒与待收款提醒</div>
+        </article>
+    </section>
+
+    <section class="shortcut-grid">
+        <article class="board-card shortcut-card">
+            <div class="shortcut-icon blue"><i class="bi bi-person-plus"></i></div>
+            <div class="shortcut-title">新增学员</div>
+            <div class="shortcut-desc">直接创建学员档案，并在同页录入服务方案。</div>
+            <div class="shortcut-meta">当前活跃 {{ active_students_count }} 人</div>
+            <div class="shortcut-action"><a class="ghost-button w-100" href="{% url 'students:create' %}">立即新建</a></div>
+        </article>
+
+        <article class="board-card shortcut-card">
+            <div class="shortcut-icon teal"><i class="bi bi-calendar-plus"></i></div>
+            <div class="shortcut-title">快速排课</div>
+            <div class="shortcut-desc">新建单次或系列课程，直接进入排课表单。</div>
+            <div class="shortcut-meta">今日日程 {{ today_totals.all }} 节</div>
+            <div class="shortcut-action"><a class="ghost-button w-100" href="{% url 'schedules:create' %}">去排课</a></div>
+        </article>
+
+        <article class="board-card shortcut-card">
+            <div class="shortcut-icon orange"><i class="bi bi-wallet2"></i></div>
+            <div class="shortcut-title">登记应收</div>
+            <div class="shortcut-desc">新增应收记录，并继续追加多笔实收流水。</div>
+            <div class="shortcut-meta">待结清 {{ open_receivables_count }} 笔</div>
+            <div class="shortcut-action"><a class="ghost-button w-100" href="{% url 'payments:create' %}">去登记</a></div>
+        </article>
+
+        <article class="board-card shortcut-card">
+            <div class="shortcut-icon green"><i class="bi bi-bell"></i></div>
+            <div class="shortcut-title">扫描提醒</div>
+            <div class="shortcut-desc">立即生成课程提醒和待收款提醒，不用先进入提醒中心。</div>
+            <div class="shortcut-meta">当前待处理 {{ pending_reminders_count }} 条</div>
+            <div class="shortcut-action">
+                <form method="post" action="{% url 'reminders:scan' %}">
+                    {% csrf_token %}
+                    <button class="ghost-button w-100" type="submit">立即扫描</button>
+                </form>
+            </div>
+        </article>
+
+        <article class="board-card shortcut-card">
+            <div class="shortcut-icon purple"><i class="bi bi-bar-chart"></i></div>
+            <div class="shortcut-title">报表中心</div>
+            <div class="shortcut-desc">导出学员、课时、收款数据和固定格式模板。</div>
+            <div class="shortcut-meta">支持 CSV / Excel</div>
+            <div class="shortcut-action"><a class="ghost-button w-100" href="{% url 'dashboard:reports' %}">打开报表</a></div>
+        </article>
+
+        <article class="board-card shortcut-card">
+            <div class="shortcut-icon blue"><i class="bi bi-gear"></i></div>
+            <div class="shortcut-title">后台设置</div>
+            <div class="shortcut-desc">进入管理后台查看系统配置和底层数据入口。</div>
+            <div class="shortcut-meta">单账号工作台</div>
+            <div class="shortcut-action"><a class="ghost-button w-100" href="/admin/">打开后台</a></div>
+        </article>
+    </section>
+
+    <section class="panel-grid">
+        <article class="board-card panel">
+            <div class="panel-head">
+                <div><h2>今日课程</h2><p>{{ today_label }}</p></div>
+                <a class="panel-link" href="{% url 'schedules:calendar' %}">查看全部 <i class="bi bi-chevron-right"></i></a>
+            </div>
+            <div class="lesson-list">
+                {% for schedule in today_schedules %}
+                    <a class="lesson-row" href="{% url 'schedules:update' schedule.pk %}">
+                        <div class="lesson-time">{{ schedule.start_at|date:"H:i" }}<br>{{ schedule.end_at|date:"H:i" }}</div>
+                        <div class="lesson-avatar">{{ schedule.student.name|slice:":1" }}</div>
+                        <div class="lesson-main">
+                            <div class="lesson-title">{{ schedule.student.name }} / {{ schedule.service_plan.subject }}</div>
+                            <div class="lesson-meta">{% if schedule.delivery_mode == "online" %}线上{% else %}线下{% endif %}{% if schedule.location %} / {{ schedule.location }}{% endif %}</div>
+                            <span class="lesson-chip">{% if schedule.service_plan.settlement_mode == "package" %}课包制{% else %}按次结算{% endif %}</span>
+                        </div>
+                        {% if schedule.status == "completed" %}
+                            <span class="status-pill green">已完成</span>
+                        {% elif schedule.status == "pending" %}
+                            <span class="status-pill blue">进行中</span>
+                        {% elif schedule.status == "rescheduled" %}
+                            <span class="status-pill orange">已改期</span>
+                        {% else %}
+                            <span class="status-pill gray">待处理</span>
+                        {% endif %}
+                    </a>
+                {% empty %}
+                    <div class="empty-state">今天还没有排课，先去新增一条课程安排。</div>
+                {% endfor %}
+            </div>
+        </article>
+
+        <article class="board-card panel">
+            <div class="panel-head">
+                <div><h2>提醒中心</h2><p>按类型分组展示待处理提醒</p></div>
+                <a class="panel-link" href="{% url 'reminders:center' %}">查看全部 <i class="bi bi-chevron-right"></i></a>
+            </div>
+            <div class="reminder-list">
+                <div class="reminder-group">
+                    <h3>上课提醒（{{ course_reminders|length }}）</h3>
+                    {% for reminder in course_reminders %}
+                        <div class="reminder-row">
+                            <div class="reminder-time">{{ reminder.remind_at|date:"H:i" }}</div>
+                            <div>
+                                <div class="fw-bold">{{ reminder.title }}</div>
+                                <div class="lesson-meta">{{ reminder.message|truncatechars:34 }}</div>
+                            </div>
+                            <div class="reminder-meta">{{ reminder.remind_at|timeuntil }}</div>
+                            <span class="status-pill red">未完成</span>
+                        </div>
+                    {% empty %}
+                        <div class="empty-state">当前没有待处理的上课提醒。</div>
+                    {% endfor %}
+                </div>
+
+                <div class="reminder-group">
+                    <h3>待收款提醒（{{ receivable_reminders|length }}）</h3>
+                    {% for reminder in receivable_reminders %}
+                        <div class="reminder-row">
+                            <div class="reminder-time">账款</div>
+                            <div>
+                                <div class="fw-bold">{{ reminder.title }}</div>
+                                <div class="lesson-meta">{{ reminder.message|truncatechars:34 }}</div>
+                            </div>
+                            <div class="reminder-meta">待处理</div>
+                            <span class="status-pill red">未完成</span>
+                        </div>
+                    {% empty %}
+                        <div class="empty-state">当前没有待收款提醒。</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </article>
+    </section>
+
+    <section class="panel-grid">
+        <article class="board-card panel">
+            <div class="panel-head">
+                <div><h2>学员概览</h2><p>围绕服务方案、课时余额与最近上课组织</p></div>
+                <div class="panel-tabs"><span class="active">全部 {{ student_overview|length }}</span><span>在读 {{ active_students_count }}</span><span>线索 {{ lead_students_count }}</span></div>
+            </div>
+            <div class="table-shell">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>学员</th>
+                            <th>服务方案</th>
+                            <th>剩余课时</th>
+                            <th>欠课时</th>
+                            <th>最近上课</th>
+                            <th>状态</th>
+                            <th>结算方式</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for row in student_overview %}
+                        <tr>
+                            <td><div class="name">{{ row.student.name }}</div><div class="sub">{{ row.student.phone }}</div></td>
+                            <td>{% if row.plan %}<div class="name">{{ row.plan.subject }}</div><div class="sub">{{ row.plan.unit_price }} / 课时</div>{% else %}<span class="text-secondary">未配置方案</span>{% endif %}</td>
+                            <td>{% if row.remaining_hours is not None %}<strong>{{ row.remaining_hours }}</strong> 小时{% else %}-{% endif %}</td>
+                            <td>{% if row.owed_hours %}<span class="text-danger fw-bold">{{ row.owed_hours }}</span> 小时{% else %}0 小时{% endif %}</td>
+                            <td>{% if row.last_class_at %}{{ row.last_class_at|date:"Y-m-d" }}{% else %}未排课{% endif %}</td>
+                            <td>
+                                {% if row.student.status == "active" %}<span class="status-pill green">在读</span>
+                                {% elif row.student.status == "lead" %}<span class="status-pill blue">潜在</span>
+                                {% elif row.student.status == "paused" %}<span class="status-pill orange">暂停</span>
+                                {% else %}<span class="status-pill gray">结束</span>{% endif %}
+                            </td>
+                            <td>{% if row.plan %}{% if row.plan.settlement_mode == "package" %}套餐课（预付）{% else %}单次课（后付）{% endif %}{% else %}-{% endif %}</td>
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="7"><div class="empty-state">还没有学员数据。</div></td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </article>
+
+        <article class="board-card panel">
+            <div class="panel-head">
+                <div><h2>收款概览（本月）</h2><p>应收、实收与未收金额按日期累计趋势</p></div>
+                <span class="lesson-chip">本月</span>
+            </div>
+            <div class="chart-legend"><span class="due">应收</span><span class="paid">实收</span><span class="open">未收</span></div>
+            <div class="chart-wrap"><canvas id="financeTrendChart"></canvas></div>
+        </article>
+    </section>
+
+    <section class="bottom-grid" id="recent-notes">
+        <div class="export-grid">
+            <article class="board-card export-card">
+                <div class="export-icon blue"><i class="bi bi-file-earmark-arrow-down"></i></div>
+                <div>
+                    <div class="export-title">报表导出</div>
+                    <div class="export-desc">一键导出学生、课时与收款经营数据</div>
+                </div>
+                <a class="ghost-button ms-auto" href="{% url 'dashboard:reports' %}">去导出</a>
+            </article>
+            <article class="board-card export-card">
+                <div class="export-icon green"><i class="bi bi-grid-1x2"></i></div>
+                <div>
+                    <div class="export-title">固定格式模板</div>
+                    <div class="export-desc">预设报表模板，可直接用于交付和打印</div>
+                </div>
+                <a class="ghost-button ms-auto" href="{% url 'dashboard:export-finance' %}">去使用</a>
+            </article>
+        </div>
+
+        <article class="board-card panel">
+            <div class="panel-head">
+                <div><h2>最近记录</h2><p>最近产生的课后备注与跟进重点</p></div>
+                <a class="panel-link" href="#recent-notes">查看全部 <i class="bi bi-chevron-right"></i></a>
+            </div>
+            <div class="note-grid">
+                {% for note in recent_notes %}
+                    <article class="note-card {% cycle 'c1' 'c2' 'c3' 'c4' %}">
+                        <div class="note-label"><i class="bi bi-journal-text"></i><span>{{ note.student.name }}</span></div>
+                        <div class="note-title">{{ note.schedule.service_plan.subject|default:"课后记录" }}</div>
+                        <div class="note-text">{{ note.summary|truncatechars:72 }}{% if note.next_focus %}<br>下次重点：{{ note.next_focus|truncatechars:26 }}{% elif note.internal_note %}<br>内部备注：{{ note.internal_note|truncatechars:26 }}{% endif %}</div>
+                        <div class="note-meta">{{ note.created_by|default:"系统" }} / {{ note.created_at|timesince }}前</div>
+                    </article>
+                {% empty %}
+                    <div class="empty-state">暂时没有最近记录，完成课程并填写备注后会显示在这里。</div>
+                {% endfor %}
+            </div>
+        </article>
+    </section>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    (() => {
+        const element = document.getElementById("financeTrendChart");
+        if (!element || typeof Chart === "undefined") return;
+        new Chart(element, {
+            type: "line",
+            data: {
+                labels: {{ finance_chart.labels|safe }},
+                datasets: [
+                    { label: "应收", data: {{ finance_chart.due|safe }}, borderColor: "#2f6df6", backgroundColor: "rgba(47,109,246,.12)", borderWidth: 3, pointRadius: 0, tension: .35 },
+                    { label: "实收", data: {{ finance_chart.received|safe }}, borderColor: "#14ae5c", backgroundColor: "rgba(20,174,92,.12)", borderWidth: 3, pointRadius: 0, tension: .35 },
+                    { label: "未收", data: {{ finance_chart.outstanding|safe }}, borderColor: "#ff9c2f", backgroundColor: "rgba(255,156,47,.12)", borderWidth: 3, pointRadius: 0, tension: .35 }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip: { backgroundColor: "#1f2a44", padding: 12, displayColors: false } },
+                interaction: { intersect: false, mode: "index" },
+                scales: {
+                    x: { grid: { display: false }, ticks: { color: "#8d97b1" } },
+                    y: { beginAtZero: true, ticks: { color: "#8d97b1", callback: (value) => `¥${value}` }, grid: { color: "rgba(152,168,204,.14)" } }
+                }
+            }
+        });
+    })();
+</script>
+{% endblock %}

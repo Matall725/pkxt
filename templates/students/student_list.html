@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block title %}学员管理 - 家教/咨询排课与收款后台{% endblock %}
+
+{% block extra_head %}
+<style>
+    .student-page { display:grid; gap:20px; }
+    .student-hero { padding:22px; display:flex; align-items:flex-end; justify-content:space-between; gap:16px; }
+    .student-hero h2 { margin:0; font-size:1.28rem; font-weight:800; }
+    .student-hero p { margin:6px 0 0; color:var(--text-soft); }
+    .student-kpis { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px; }
+    .student-kpi { padding:18px 20px; }
+    .student-kpi strong { display:block; font-size:1.9rem; line-height:1; font-weight:800; margin-top:8px; }
+    .student-kpi span { color:var(--text-soft); font-size:.88rem; font-weight:700; }
+    .student-toolbar { padding:20px 22px; }
+    .student-toolbar__row { display:grid; grid-template-columns:1.4fr .65fr auto; gap:14px; align-items:end; }
+    .student-table-card { padding:22px; }
+    .student-table-card .table-shell { margin-top:14px; }
+    .student-action-row { display:flex; flex-wrap:wrap; gap:8px; }
+    @media (max-width: 991.98px) { .student-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); } .student-toolbar__row { grid-template-columns:1fr; } }
+    @media (max-width: 575.98px) { .student-kpis { grid-template-columns:1fr; } .student-hero { flex-direction:column; align-items:stretch; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="student-page">
+    <section class="board-card student-hero">
+        <div>
+            <h2>学员管理</h2>
+            <p>按学员维度集中查看服务方案、课时、收款和快速排课入口。</p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <a class="primary-button" href="{% url 'students:create' %}"><i class="bi bi-plus-lg"></i><span>新增学员</span></a>
+            <a class="ghost-button" href="/admin/students/student/"><i class="bi bi-box-arrow-up-right"></i><span>打开 Admin</span></a>
+        </div>
+    </section>
+
+    <section class="student-kpis">
+        <article class="board-card student-kpi"><span>全部学员</span><strong>{{ totals.all }}</strong></article>
+        <article class="board-card student-kpi"><span>服务中</span><strong>{{ totals.active }}</strong></article>
+        <article class="board-card student-kpi"><span>潜在线索</span><strong>{{ totals.lead }}</strong></article>
+        <article class="board-card student-kpi"><span>暂停中</span><strong>{{ totals.paused }}</strong></article>
+    </section>
+
+    <section class="board-card student-toolbar">
+        <form method="get" class="student-toolbar__row">
+            <div>
+                <label class="form-label" for="student-search">搜索学员</label>
+                <input id="student-search" class="form-control" type="text" name="search" value="{{ search }}" placeholder="按姓名、昵称、手机号或家长联系方式搜索">
+            </div>
+            <div>
+                <label class="form-label" for="student-status">状态筛选</label>
+                <select id="student-status" class="form-select" name="status">
+                    <option value="">全部状态</option>
+                    {% for value, label in status_choices %}
+                        <option value="{{ value }}" {% if value == selected_status %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="d-flex gap-2">
+                <button class="primary-button" type="submit"><i class="bi bi-funnel"></i><span>筛选</span></button>
+                <a class="ghost-button" href="{% url 'students:list' %}">重置</a>
+            </div>
+        </form>
+    </section>
+
+    <section class="board-card student-table-card">
+        <div class="panel-head">
+            <div><h2>学员档案</h2><p>点击右侧操作可直接进入排课或应收登记</p></div>
+            <span class="lesson-chip">结果 {{ students|length }} 条</span>
+        </div>
+
+        <div class="table-shell">
+            <table>
+                <thead>
+                <tr>
+                    <th>学员</th>
+                    <th>服务方案</th>
+                    <th>课时概况</th>
+                    <th>状态</th>
+                    <th>标签</th>
+                    <th>操作</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for student in students %}
+                    <tr>
+                        <td>
+                            <div class="name">{{ student.name }}</div>
+                            <div class="sub">{{ student.phone }}{% if student.nickname %} · {{ student.nickname }}{% endif %}</div>
+                            <div class="sub">家长：{{ student.parent_phone|default:"未填写" }}</div>
+                        </td>
+                        <td>
+                            {% if student.active_service_plan %}
+                                <div class="name">{{ student.active_service_plan.subject }}</div>
+                                <div class="sub">{% if student.active_service_plan.settlement_mode == "package" %}课包制{% else %}按次结算{% endif %} · 单价 {{ student.active_service_plan.unit_price }}</div>
+                            {% else %}
+                                <span class="text-secondary">暂未配置生效方案</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if student.active_service_plan and student.active_service_plan.remaining_hours is not None %}
+                                <div class="name">剩余 {{ student.active_service_plan.remaining_hours }} 小时</div>
+                                <div class="sub">欠课时 {{ student.active_service_plan.owed_hours|default:"0" }}</div>
+                            {% else %}
+                                <span class="text-secondary">按次结算或未录入</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if student.status == "active" %}
+                                <span class="status-pill green">服务中</span>
+                            {% elif student.status == "lead" %}
+                                <span class="status-pill blue">潜在</span>
+                            {% elif student.status == "paused" %}
+                                <span class="status-pill orange">暂停</span>
+                            {% else %}
+                                <span class="status-pill gray">结束</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ student.tags|default:"-" }}</td>
+                        <td>
+                            <div class="student-action-row">
+                                <a class="ghost-button" href="{% url 'students:update' student.pk %}">编辑</a>
+                                <a class="ghost-button" href="{% url 'schedules:create' %}?student={{ student.pk }}{% if student.active_service_plan %}&service_plan={{ student.active_service_plan.pk }}{% endif %}">排课</a>
+                                <a class="ghost-button" href="{% url 'payments:create' %}?student={{ student.pk }}{% if student.active_service_plan %}&service_plan={{ student.active_service_plan.pk }}{% endif %}">应收</a>
+                            </div>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="6"><div class="empty-state">当前还没有符合条件的学员记录，先创建一个学员档案即可开始排课和收款。</div></td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+{% endblock %}

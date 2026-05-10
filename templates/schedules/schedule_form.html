@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block title %}{% if mode == "create" %}新增排课{% else %}编辑排课{% endif %} - 家教/咨询排课与收款系统{% endblock %}
+
+{% block extra_head %}
+<style>
+    .schedule-page { display: grid; gap: 20px; }
+    .schedule-hero { padding: 24px; display: flex; align-items: end; justify-content: space-between; gap: 16px; }
+    .schedule-hero h2 { margin: 0; font-size: 1.3rem; font-weight: 800; }
+    .schedule-hero p { margin: 6px 0 0; color: var(--text-soft); }
+    .schedule-layout { display: grid; grid-template-columns: minmax(0, 1.15fr) 380px; gap: 20px; }
+    .schedule-panel { padding: 22px; }
+    .schedule-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+    .schedule-grid .span-2 { grid-column: span 2; }
+    .info-list { display: grid; gap: 10px; }
+    .info-row { display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 12px; padding: 12px 0; border-bottom: 1px dashed rgba(152, 168, 204, 0.16); }
+    .info-row:last-child { border-bottom: none; }
+    .note-list { display: grid; gap: 10px; }
+    .note-item { padding: 14px 16px; border-radius: 18px; background: rgba(248, 250, 255, 0.88); border: 1px solid rgba(152, 168, 204, 0.12); }
+    .note-item__meta { color: var(--text-faint); font-size: 0.84rem; }
+    @media (max-width: 1200px) { .schedule-layout { grid-template-columns: 1fr; } }
+    @media (max-width: 768px) { .schedule-grid { grid-template-columns: 1fr; } .schedule-grid .span-2 { grid-column: auto; } }
+    @media (max-width: 575.98px) { .schedule-hero { flex-direction: column; align-items: stretch; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="schedule-page">
+    <section class="board-card schedule-hero">
+        <div>
+            <h2>{% if mode == "create" %}新增排课{% else %}编辑排课{% endif %}</h2>
+            <p>支持按天或按周重复排课。编辑时可以处理仅本次、本次及未来，或者整个系列。</p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <a class="ghost-button" href="{% url 'schedules:calendar' %}"><i class="bi bi-arrow-left"></i><span>返回日历</span></a>
+            {% if schedule %}
+                <a class="ghost-button" href="{% url 'sessions:complete' schedule.pk %}"><i class="bi bi-check2-square"></i><span>完成上课</span></a>
+                <a class="primary-button" href="{% url 'notes:create' schedule.pk %}"><i class="bi bi-journal-plus"></i><span>新增备注</span></a>
+            {% endif %}
+        </div>
+    </section>
+
+    <section class="schedule-layout">
+        <article class="board-card schedule-panel">
+            <div class="panel-head">
+                <div>
+                    <h2>排课表单</h2>
+                    <p>{% if mode == "create" %}录入基础课程信息并生成单次或系列排课。{% else %}修改当前排课及其系列规则。{% endif %}</p>
+                </div>
+                <span class="lesson-chip">{% if mode == "create" %}新建{% else %}编辑{% endif %}</span>
+            </div>
+            <form method="post" class="schedule-grid mt-3">
+                {% csrf_token %}
+                {% for field in form %}
+                    <div class="{% if field.name == 'notes' or field.name == 'location' or field.name == 'update_scope' %}span-2{% endif %}">
+                        <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+                        {% for error in field.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                    </div>
+                {% endfor %}
+                {% for error in form.non_field_errors %}
+                    <div class="span-2 text-danger small">{{ error }}</div>
+                {% endfor %}
+                <div class="span-2 d-flex flex-wrap gap-2">
+                    <button class="primary-button" type="submit"><i class="bi bi-save2"></i><span>保存排课</span></button>
+                    <a class="ghost-button" href="{% url 'schedules:calendar' %}">取消</a>
+                </div>
+            </form>
+        </article>
+
+        {% if schedule %}
+        <aside class="d-grid gap-4">
+            <article class="board-card schedule-panel">
+                <div class="panel-head">
+                    <div>
+                        <h2>当前记录</h2>
+                        <p>查看当前课程的基础信息和系列归属。</p>
+                    </div>
+                    <span class="status-pill {% if schedule.status == 'completed' %}green{% elif schedule.status == 'pending' %}blue{% elif schedule.status == 'rescheduled' %}orange{% elif schedule.status == 'canceled' %}red{% else %}gray{% endif %}">{{ schedule.get_status_display }}</span>
+                </div>
+                <div class="info-list mt-3">
+                    <div class="info-row"><strong>学员</strong><span>{{ schedule.student.name }}</span></div>
+                    <div class="info-row"><strong>方案</strong><span>{{ schedule.service_plan }}</span></div>
+                    <div class="info-row"><strong>开始</strong><span>{{ schedule.start_at|date:"Y-m-d H:i" }}</span></div>
+                    <div class="info-row"><strong>系列</strong><span>{{ schedule.recurrence_group|default:"单次排课" }}</span></div>
+                </div>
+            </article>
+
+            <article class="board-card schedule-panel">
+                <div class="panel-head">
+                    <div>
+                        <h2>完成记录</h2>
+                        <p>当前排课的上课完成情况。</p>
+                    </div>
+                    <a class="panel-link" href="{% url 'sessions:complete' schedule.pk %}">打开流程</a>
+                </div>
+                {% if completion %}
+                    <div class="info-list mt-3">
+                        <div class="info-row"><strong>出勤</strong><span>{{ completion.get_attendance_status_display }}</span></div>
+                        <div class="info-row"><strong>实际时长</strong><span>{{ completion.actual_duration_hours }}</span></div>
+                        <div class="info-row"><strong>扣减课时</strong><span>{{ completion.deducted_hours }}</span></div>
+                        <div class="info-row"><strong>新增欠课时</strong><span>{{ completion.owed_hours_added }}</span></div>
+                    </div>
+                {% else %}
+                    <div class="empty-state mt-3">当前还没有完成记录。</div>
+                {% endif %}
+            </article>
+
+            <article class="board-card schedule-panel">
+                <div class="panel-head">
+                    <div>
+                        <h2>课后备注</h2>
+                        <p>可为同一排课维护多条备注。</p>
+                    </div>
+                    <a class="panel-link" href="{% url 'notes:create' schedule.pk %}">新增备注</a>
+                </div>
+                <div class="note-list mt-3">
+                    {% for note in notes %}
+                        <a class="note-item" href="{% url 'notes:update' note.pk %}">
+                            <div class="fw-bold text-dark">{{ note.summary|truncatechars:48 }}</div>
+                            <div class="note-item__meta">{{ note.created_at|date:"Y-m-d H:i" }}</div>
+                        </a>
+                    {% empty %}
+                        <div class="empty-state">当前还没有课后备注。</div>
+                    {% endfor %}
+                </div>
+            </article>
+        </aside>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}

@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block title %}排课日历 - 家教/咨询排课与收款系统{% endblock %}
+
+{% block extra_head %}
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.css" rel="stylesheet">
+<style>
+    .calendar-page { display: grid; gap: 20px; }
+    .calendar-hero { padding: 24px; display: flex; align-items: end; justify-content: space-between; gap: 16px; }
+    .calendar-hero h2 { margin: 0; font-size: 1.3rem; font-weight: 800; }
+    .calendar-hero p { margin: 6px 0 0; color: var(--text-soft); }
+    .calendar-layout { display: grid; grid-template-columns: minmax(0, 1.35fr) 360px; gap: 20px; }
+    .calendar-panel { padding: 22px; }
+    .calendar-note { margin-top: 4px; color: var(--text-faint); font-size: 0.88rem; }
+    .upcoming-list { display: grid; gap: 12px; margin-top: 14px; }
+    .upcoming-item { display: grid; gap: 8px; padding: 16px; border-radius: 18px; background: rgba(248, 250, 255, 0.88); border: 1px solid rgba(152, 168, 204, 0.12); }
+    .upcoming-item__meta { color: var(--text-soft); font-size: 0.88rem; }
+    #calendar { min-height: 760px; }
+    .fc .fc-toolbar-title { font-size: 1.1rem; font-weight: 800; }
+    .fc .fc-button {
+        background: rgba(47, 109, 246, 0.1);
+        border: 1px solid rgba(47, 109, 246, 0.18);
+        color: var(--brand);
+        border-radius: 12px;
+        box-shadow: none;
+    }
+    .fc .fc-button-primary:not(:disabled).fc-button-active,
+    .fc .fc-button-primary:not(:disabled):active {
+        background: linear-gradient(135deg, #3381ff 0%, #1d56d6 100%);
+        border-color: transparent;
+        color: #fff;
+    }
+    .fc-theme-standard td,
+    .fc-theme-standard th,
+    .fc-theme-standard .fc-scrollgrid {
+        border-color: rgba(152, 168, 204, 0.14);
+    }
+    .fc .fc-timegrid-slot-label-cushion,
+    .fc .fc-col-header-cell-cushion { color: var(--text-soft); font-weight: 700; }
+    @media (max-width: 1200px) { .calendar-layout { grid-template-columns: 1fr; } }
+    @media (max-width: 575.98px) { .calendar-hero { flex-direction: column; align-items: stretch; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="calendar-page">
+    <section class="board-card calendar-hero">
+        <div>
+            <h2>排课日历</h2>
+            <p>按周查看课程安排，支持新建、改期、取消和系列排课。移动端保留核心查看和快速进入编辑页的能力。</p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <a class="ghost-button" href="{% url 'students:list' %}"><i class="bi bi-people"></i><span>学员入口</span></a>
+            <a class="primary-button" href="{% url 'schedules:create' %}"><i class="bi bi-plus-lg"></i><span>新增排课</span></a>
+        </div>
+    </section>
+
+    <section class="calendar-layout">
+        <article class="board-card calendar-panel">
+            <div class="panel-head">
+                <div>
+                    <h2>课程日历</h2>
+                    <p class="calendar-note">桌面端默认周视图，手机端自动切到列表周视图。</p>
+                </div>
+                <span class="lesson-chip">支持系列规则</span>
+            </div>
+            <div class="mt-3">
+                <div id="calendar"></div>
+            </div>
+        </article>
+
+        <aside class="board-card calendar-panel">
+            <div class="panel-head">
+                <div>
+                    <h2>最近排课</h2>
+                    <p class="calendar-note">快速进入对应课程编辑页。</p>
+                </div>
+                <a class="panel-link" href="{% url 'schedules:create' %}">快速新建</a>
+            </div>
+            <div class="upcoming-list">
+                {% for schedule in upcoming %}
+                    <a class="upcoming-item" href="{% url 'schedules:update' schedule.pk %}">
+                        <div class="d-flex justify-content-between gap-3">
+                            <strong>{{ schedule.student.name }} / {{ schedule.service_plan.subject }}</strong>
+                            {% if schedule.status == "completed" %}
+                                <span class="status-pill green">已完成</span>
+                            {% elif schedule.status == "pending" %}
+                                <span class="status-pill blue">待上课</span>
+                            {% elif schedule.status == "rescheduled" %}
+                                <span class="status-pill orange">已改期</span>
+                            {% elif schedule.status == "canceled" %}
+                                <span class="status-pill red">已取消</span>
+                            {% else %}
+                                <span class="status-pill gray">{{ schedule.get_status_display }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="upcoming-item__meta">{{ schedule.start_at|date:"Y-m-d H:i" }} 至 {{ schedule.end_at|date:"H:i" }}</div>
+                        <div class="upcoming-item__meta">{{ schedule.title|default:"未填写标题" }}</div>
+                    </a>
+                {% empty %}
+                    <div class="empty-state">当前还没有可展示的排课记录。</div>
+                {% endfor %}
+            </div>
+        </aside>
+    </section>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const calendarEl = document.getElementById("calendar");
+    const calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: window.innerWidth < 768 ? "listWeek" : "timeGridWeek",
+        locale: "zh-cn",
+        height: "auto",
+        headerToolbar: {
+            left: "prev,next today",
+            center: "title",
+            right: "timeGridDay,timeGridWeek,dayGridMonth,listWeek"
+        },
+        events: "{% url 'schedules:events' %}",
+        eventClick: function(info) {
+            if (info.event.url) {
+                info.jsEvent.preventDefault();
+                window.location.href = info.event.url;
+            }
+        }
+    });
+    calendar.render();
+});
+</script>
+{% endblock %}
