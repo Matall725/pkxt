@@ -530,6 +530,173 @@
             .topbar__actions { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; }
             .profile-pill__label { display: none; }
         }
+
+        /* ==================== AI Copilot Drawer Styles ==================== */
+        .ai-copilot-trigger {
+            position: fixed;
+            right: 24px;
+            bottom: 24px;
+            z-index: 1050;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #8b6cf7 0%, #2f6df6 100%);
+            color: #fff;
+            display: grid;
+            place-items: center;
+            font-size: 1.4rem;
+            box-shadow: 0 10px 25px rgba(47, 109, 246, 0.35);
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .ai-copilot-trigger:hover {
+            transform: scale(1.1) rotate(15deg);
+            box-shadow: 0 15px 30px rgba(47, 109, 246, 0.5);
+        }
+
+        .ai-drawer {
+            position: fixed;
+            top: 0;
+            right: -420px;
+            width: 400px;
+            height: 100vh;
+            z-index: 1060;
+            background: rgba(255, 255, 255, 0.88);
+            border-left: 1px solid var(--line);
+            box-shadow: -10px 0 40px rgba(24, 32, 51, 0.12);
+            backdrop-filter: blur(20px);
+            display: flex;
+            flex-direction: column;
+            transition: right 0.4s cubic-bezier(0.075, 0.82, 0.165, 1);
+        }
+
+        .ai-drawer.is-open {
+            right: 0;
+        }
+
+        .ai-drawer-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--line);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: linear-gradient(135deg, rgba(139, 108, 247, 0.05) 0%, rgba(47, 109, 246, 0.05) 100%);
+        }
+
+        .ai-drawer-title {
+            font-weight: 800;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-base);
+        }
+
+        .ai-drawer-title i {
+            color: var(--purple);
+        }
+
+        .ai-drawer-close {
+            background: transparent;
+            border: none;
+            font-size: 1.2rem;
+            color: var(--text-soft);
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 8px;
+            transition: background 0.2s;
+        }
+
+        .ai-drawer-close:hover {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        .ai-chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .ai-message {
+            max-width: 85%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            font-size: 0.92rem;
+            line-height: 1.5;
+        }
+
+        .ai-message.user {
+            align-self: flex-end;
+            background: linear-gradient(135deg, #5ea8ff 0%, #2f6df6 100%);
+            color: #fff;
+            border-bottom-right-radius: 4px;
+            box-shadow: 0 4px 12px rgba(47, 109, 246, 0.15);
+        }
+
+        .ai-message.assistant {
+            align-self: flex-start;
+            background: #fff;
+            color: var(--text-base);
+            border-bottom-left-radius: 4px;
+            border: 1px solid var(--line);
+            box-shadow: var(--shadow);
+        }
+
+        .ai-drawer-footer {
+            padding: 16px 20px 24px;
+            border-top: 1px solid var(--line);
+            background: #fff;
+        }
+
+        .ai-input-wrapper {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            background: #f6f8fd;
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            padding: 4px 8px 4px 16px;
+        }
+
+        .ai-input-wrapper input {
+            flex: 1;
+            border: none;
+            background: transparent;
+            outline: none;
+            padding: 8px 0;
+            font-size: 0.92rem;
+            color: var(--text-base);
+        }
+
+        .ai-send-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 12px;
+            background: var(--brand);
+            color: #fff;
+            border: none;
+            display: grid;
+            place-items: center;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .ai-send-btn:hover {
+            background: var(--brand-dark);
+        }
+
+        /* HTMX 确认卡片样式 */
+        .ai-proposal-card {
+            background: #f8faff;
+            border: 1px solid rgba(47, 109, 246, 0.2);
+            border-radius: 14px;
+            padding: 12px;
+            margin-top: 8px;
+        }
     </style>
     {% block extra_head %}{% endblock %}
 </head>
@@ -653,6 +820,42 @@
     </div>
 </div>
 
+<!-- AI Copilot Trigger Button -->
+<div class="ai-copilot-trigger" id="aiTrigger" title="打开 AI 智能助手">
+    <i class="bi bi-stars"></i>
+</div>
+
+<!-- AI Copilot Slide-out Drawer -->
+<div class="ai-drawer" id="aiDrawer">
+    <div class="ai-drawer-header">
+        <div class="ai-drawer-title">
+            <i class="bi bi-stars animate-pulse"></i>
+            <span>AI 智能助理</span>
+        </div>
+        <button class="ai-drawer-close" id="aiClose" aria-label="关闭">
+            <i class="bi bi-x-lg"></i>
+        </button>
+    </div>
+
+    <div class="ai-chat-messages" id="aiChatMessages">
+        <div class="ai-message assistant">
+            您好！我是您的 AI 智能助理。您可以让我帮您：<br>
+            1. <strong>快速排课</strong>（例如：“帮我约下周三下午3点小明的数学课，上2个小时”）<br>
+            2. <strong>生成课后反馈</strong><br>
+            3. <strong>起草催款信息</strong>
+        </div>
+    </div>
+
+    <div class="ai-drawer-footer">
+        <div class="ai-input-wrapper">
+            <input type="text" id="aiInput" placeholder="输入指令，如：帮我约小明下周三的课..." autocomplete="off">
+            <button class="ai-send-btn" id="aiSendBtn">
+                <i class="bi bi-send-fill"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
 <nav class="mobile-tabbar">
     <a class="{% if request.path == '/' %}is-active{% endif %}" href="{% url 'dashboard:home' %}">
         <i class="bi bi-house-door"></i><span>工作台</span>
@@ -673,6 +876,88 @@
 {% endif %}
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const aiTrigger = document.getElementById("aiTrigger");
+        const aiDrawer = document.getElementById("aiDrawer");
+        const aiClose = document.getElementById("aiClose");
+        const aiInput = document.getElementById("aiInput");
+        const aiSendBtn = document.getElementById("aiSendBtn");
+        const aiChatMessages = document.getElementById("aiChatMessages");
+
+        if (!aiTrigger) return;
+
+        // 打开/关闭抽屉
+        aiTrigger.addEventListener("click", () => {
+            aiDrawer.classList.add("is-open");
+            aiInput.focus();
+        });
+
+        aiClose.addEventListener("click", () => {
+            aiDrawer.classList.remove("is-open");
+        });
+
+        // 发送消息逻辑
+        function sendMessage() {
+            const text = aiInput.value.trim();
+            if (!text) return;
+
+            // 添加用户消息
+            appendMessage("user", text);
+            aiInput.value = "";
+
+            // 创建 AI 占位消息
+            const aiMessageEl = appendMessage("assistant", "正在思考...");
+
+            // 建立 SSE 连接进行流式传输
+            const eventSource = new EventSource(`/ai/copilot/stream/?q=${encodeURIComponent(text)}`);
+            let aiResponseText = "";
+
+            eventSource.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                if (aiResponseText === "") {
+                    aiMessageEl.innerHTML = ""; // 清除“正在思考...”
+                }
+                aiResponseText += data.text;
+                aiMessageEl.innerHTML = formatMarkdown(aiResponseText);
+                aiChatMessages.scrollTop = aiChatMessages.scrollHeight;
+            };
+
+            eventSource.onerror = function() {
+                eventSource.close();
+                // 如果是流式传输正常结束，或者遇到断开
+                if (aiMessageEl.innerHTML === "正在思考...") {
+                    aiMessageEl.innerHTML = "抱歉，AI 助手暂时无法响应，请稍后再试。";
+                }
+                // 触发 HTMX 重新解析新加入的 HTML 节点（比如卡片中的 hx-post 按钮）
+                if (typeof htmx !== "undefined") {
+                    htmx.process(aiMessageEl);
+                }
+            };
+        }
+
+        aiSendBtn.addEventListener("click", sendMessage);
+        aiInput.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") sendMessage();
+        });
+
+        function appendMessage(sender, text) {
+            const msg = document.createElement("div");
+            msg.className = `ai-message ${sender}`;
+            msg.innerHTML = text;
+            aiChatMessages.appendChild(msg);
+            aiChatMessages.scrollTop = aiChatMessages.scrollHeight;
+            return msg;
+        }
+
+        // 极简 Markdown 格式化（支持加粗和换行）
+        function formatMarkdown(text) {
+            return text
+                .replace(/\n/g, "<br>")
+                .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+        }
+    });
+</script>
 {% block extra_js %}{% endblock %}
 </body>
 </html>

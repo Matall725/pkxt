@@ -17,4 +17,5 @@ urlpatterns = [
     path("notes/", include("notes.urls")),
     path("payments/", include("payments.urls")),
     path("reminders/", include("reminders.urls")),
+    path("ai/", include("ai_gateway.urls")),
 ]

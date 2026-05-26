@@ -8,6 +8,9 @@
     .student-form-shell { padding:22px; }
     .summary-stack { display:grid; gap:16px; }
     .summary-card { padding:20px; }
+    .htmx-indicator { display: none; }
+    .htmx-request .htmx-indicator { display: inline-block; }
+    .htmx-request.htmx-indicator { display: inline-block; }
     @media (max-width: 1199.98px) { .student-form-page { grid-template-columns:1fr; } }
 </style>
 {% endblock %}
@@ -89,6 +92,58 @@
                     <div>累计应收：{{ summary.receivable_due }}</div>
                     <div>累计实收：{{ summary.receivable_received }}</div>
                     <div>当前未收：{{ summary.receivable_outstanding }}</div>
+                </div>
+            </section>
+
+            <!-- AI 智能洞察 -->
+            <section class="board-card summary-card bg-light border-primary-subtle">
+                <h3 class="h5 mb-3 text-primary"><i class="bi bi-stars"></i> AI 智能洞察</h3>
+
+                <!-- 风险指标 -->
+                <div class="mb-4">
+                    <h4 class="h6 fw-bold mb-2">学员风险指标</h4>
+                    <div class="d-flex flex-column gap-2">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="text-secondary small">消课取消率</span>
+                            <span class="badge {% if summary.cancellation_rate > 20 %}bg-danger{% elif summary.cancellation_rate > 10 %}bg-warning{% else %}bg-success{% endif %}">
+                                {{ summary.cancellation_rate }}%
+                            </span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="text-secondary small">平均缴费延迟</span>
+                            <span class="badge {% if summary.payment_latency > 7 %}bg-danger{% elif summary.payment_latency > 3 %}bg-warning{% else %}bg-success{% endif %}">
+                                {{ summary.payment_latency }} 天
+                            </span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="text-secondary small">剩余课时</span>
+                            <span class="badge {% if summary.remaining_hours < 5 %}bg-danger{% elif summary.remaining_hours < 10 %}bg-warning{% else %}bg-success{% endif %}">
+                                {{ summary.remaining_hours }} 小时
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI 学员画像 -->
+                <div>
+                    <h4 class="h6 fw-bold mb-2">AI 学员画像</h4>
+                    <div id="aiPortraitContainer" class="p-3 bg-white border rounded small text-secondary">
+                        <div class="text-center py-2">
+                            <button class="btn btn-sm btn-outline-primary"
+                                    hx-get="{% url 'ai_gateway:student_portrait' %}?student_id={{ student.pk }}"
+                                    hx-target="#aiPortraitContainer"
+                                    hx-indicator="#portraitSpinner"
+                                    type="button">
+                                <i class="bi bi-magic"></i> 生成学员画像
+                            </button>
+                            <div id="portraitSpinner" class="htmx-indicator mt-2">
+                                <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <span class="ms-1 small">画像生成中...</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </section>
 

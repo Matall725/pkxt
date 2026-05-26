@@ -25,6 +25,7 @@ INSTALLED_APPS = [
     "notes.apps.NotesConfig",
     "reminders.apps.RemindersConfig",
     "dashboard.apps.DashboardConfig",
+    "ai_gateway.apps.AiGatewayConfig",
 ]
 
 MIDDLEWARE = [
@@ -95,6 +96,8 @@ ONE_CLICK_LOGIN_USERNAME = get_env("DJANGO_ONE_CLICK_LOGIN_USERNAME", "owner")
 ONE_CLICK_LOGIN_PASSWORD = get_env("DJANGO_ONE_CLICK_LOGIN_PASSWORD", "ChangeMe123!")
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+ANTHROPIC_API_KEY = get_env("ANTHROPIC_API_KEY", "dummy-key-for-tests-and-dev")
 
 ADMIN_SITE_HEADER = "家教/咨询排课与收款系统"
 ADMIN_SITE_TITLE = "运营后台"

@@ -6,6 +6,7 @@ from django.db import transaction
 from django.db.models import Count, Q, Sum
 from django.db.models.functions import Coalesce
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 
 from .forms import ServicePlanFormSet, StudentForm
 from .models import Student
@@ -129,6 +130,32 @@ def student_create_view(request):
     )
 
 
+def calculate_payment_latency(student):
+    today = timezone.localdate()
+    receivables = student.receivables.all()
+    if not receivables.exists():
+        return 0.0
+
+    total_latency_days = 0
+    count = 0
+    for r in receivables:
+        if r.status == "paid":
+            latest_entry = r.entries.order_by("-received_at").first()
+            if latest_entry:
+                actual_date = timezone.localtime(latest_entry.received_at).date()
+                latency = (actual_date - r.due_date).days
+                if latency > 0:
+                    total_latency_days += latency
+                    count += 1
+        else:
+            if r.due_date < today:
+                latency = (today - r.due_date).days
+                total_latency_days += latency
+                count += 1
+
+    return round(total_latency_days / count, 1) if count > 0 else 0.0
+
+
 @login_required
 def student_update_view(request, pk: int):
     student = get_object_or_404(Student.objects.prefetch_related("service_plans"), pk=pk)
@@ -146,12 +173,26 @@ def student_update_view(request, pk: int):
         amount_received=Coalesce(Sum("amount_received"), Decimal("0")),
     )
     outstanding = receivable_totals["amount_due"] - receivable_totals["amount_received"]
+
+    # 计算风险指标
+    total_schedules = student.schedules.count()
+    canceled_schedules = student.schedules.filter(status="canceled").count()
+    cancellation_rate = round((canceled_schedules / total_schedules * 100), 1) if total_schedules > 0 else 0.0
+
+    payment_latency = calculate_payment_latency(student)
+
+    active_plan = student.active_service_plan
+    remaining_hours = active_plan.remaining_hours if (active_plan and active_plan.remaining_hours is not None) else Decimal("0")
+
     summary = {
         "schedule_count": student.schedules.count(),
         "note_count": student.notes.count(),
         "receivable_due": receivable_totals["amount_due"],
         "receivable_received": receivable_totals["amount_received"],
         "receivable_outstanding": outstanding if outstanding > Decimal("0") else Decimal("0"),
+        "cancellation_rate": cancellation_rate,
+        "payment_latency": payment_latency,
+        "remaining_hours": remaining_hours,
     }
     return render(
         request,
