@@ -1,5 +1,5 @@
 import uuid
-from datetime import timedelta
+from datetime import timedelta, time
 from decimal import Decimal
 
 from django.conf import settings
@@ -115,6 +115,17 @@ class Schedule(TimeStampedModel):
             errors["service_plan"] = "服务方案必须属于当前学员。"
         if self.title == "":
             self.title = f"{self.student.name} - {self.service_plan.subject}" if self.student_id and self.service_plan_id else ""
+
+        if self.start_at and self.duration_hours:
+            local_start = timezone.localtime(self.start_at)
+            local_end = timezone.localtime(self.end_at)
+            if (
+                local_start.time() < time(9, 0)
+                or local_end.time() > time(21, 0)
+                or local_start.date() != local_end.date()
+            ):
+                errors["start_at"] = "排课时间必须在工作时间（9:00 - 21:00）范围内。"
+
         conflicts = list(self.get_conflicting_schedules())
         if conflicts:
             errors["start_at"] = "当前时间段与同一执行账号或同一学员的现有排课冲突。"

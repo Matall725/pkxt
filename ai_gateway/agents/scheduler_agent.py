@@ -1,5 +1,5 @@
 import json
-from datetime import datetime
+from datetime import datetime, time
 from decimal import Decimal
 from django.db.models import Q
 from django.utils import timezone
@@ -45,7 +45,7 @@ def get_student_service_plans(student_id: int):
 
 def verify_schedule_conflicts(student_id: int, start_at: str, duration_hours: float, owner_id: int = None):
     """
-    验证拟排课时间段是否与该学员或老师的现有排课冲突。
+    验证拟排课时间段是否与该学员或老师的现有排课冲突，并检查是否在工作时间（9:00 - 21:00）内。
     """
     dt = parse_datetime(start_at)
     if not dt:
@@ -53,6 +53,15 @@ def verify_schedule_conflicts(student_id: int, start_at: str, duration_hours: fl
 
     if timezone.is_naive(dt):
         dt = timezone.make_aware(dt, timezone.get_current_timezone())
+
+    local_start = timezone.localtime(dt)
+    local_end = local_start + timezone.timedelta(minutes=int(Decimal(str(duration_hours)) * Decimal("60")))
+
+    outside_working_hours = (
+        local_start.time() < time(9, 0)
+        or local_end.time() > time(21, 0)
+        or local_start.date() != local_end.date()
+    )
 
     temp_schedule = Schedule(
         student_id=student_id,
@@ -72,6 +81,7 @@ def verify_schedule_conflicts(student_id: int, start_at: str, duration_hours: fl
             "owner_name": c.owner.username if c.owner else None
         })
     return {
+        "outside_working_hours": outside_working_hours,
         "has_conflict": len(results) > 0,
         "conflicts": results
     }
@@ -120,9 +130,11 @@ def get_scheduler_system_prompt() -> str:
    - 如果学员没有生效中的服务方案，告知用户无法排课。
    - 如果有多个方案，请询问用户使用哪一个。
 3. 根据用户描述的时间（如“明天下午3点”、“下周三”），结合今天日期（2026-05-26，星期二）计算出具体的 ISO 时间字符串（例如“2026-05-27T15:00:00”）。
-4. 使用 `verify_schedule_conflicts` 验证该时间段是否存在冲突。
+   - 注意：排课的本地时间必须在工作时间（9:00 - 21:00）范围内，即开始时间不早于 9:00，结束时间不晚于 21:00。如果用户提供的时间不在此范围内，请直接提示用户并建议其调整时间。
+4. 使用 `verify_schedule_conflicts` 验证该时间段是否存在冲突以及是否在工作时间内。
+   - 如果时间段不在工作时间（9:00 - 21:00）内（即 `outside_working_hours` 为 true），告知用户排课时间必须在工作时间内，并建议用户调整时间。
    - 如果存在冲突，列出冲突的排课信息，并建议用户调整时间。
-   - 如果没有冲突，且所有信息完整（学员、服务方案、开始时间、时长），请输出排课确认卡片。
+   - 如果没有冲突且在工作时间内，且所有信息完整（学员、服务方案、开始时间、时长），请输出排课确认卡片。
 
 【排课确认卡片输出格式要求】
 当你确认可以排课时，除了文字回复外，你必须在回复的末尾输出一个 HTML 格式的排课确认卡片。
@@ -178,7 +190,7 @@ SCHEDULER_TOOLS = [
     },
     {
         "name": "verify_schedule_conflicts",
-        "description": "验证拟排课时间段是否与该学员或老师的现有排课冲突。",
+        "description": "验证拟排课时间段是否与该学员或老师的现有排课冲突，并检查是否在工作时间（9:00 - 21:00）内。",
         "input_schema": {
             "type": "object",
             "properties": {

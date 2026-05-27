@@ -1,4 +1,5 @@
 from decimal import Decimal
+from unittest.mock import patch
 
 import pytest
 from django.contrib.auth import get_user_model
@@ -76,7 +77,8 @@ def test_csrf_failure_uses_friendly_page():
 
 @pytest.mark.django_db
 def test_schedule_conflict_validation_blocks_overlap(user, student, service_plan):
-    start_at = timezone.now() + timezone.timedelta(hours=1)
+    local_tomorrow = timezone.localtime(timezone.now() + timezone.timedelta(days=1))
+    start_at = local_tomorrow.replace(hour=14, minute=0, second=0, microsecond=0)
     Schedule.objects.create(
         student=student,
         service_plan=service_plan,
@@ -103,7 +105,8 @@ def test_schedule_conflict_validation_blocks_overlap(user, student, service_plan
 
 @pytest.mark.django_db
 def test_series_schedule_creation_generates_multiple_records(user, student, service_plan):
-    start_at = timezone.now() + timezone.timedelta(days=1)
+    local_tomorrow = timezone.localtime(timezone.now() + timezone.timedelta(days=1))
+    start_at = local_tomorrow.replace(hour=14, minute=0, second=0, microsecond=0)
     schedules = create_schedule_batch(
         owner=user,
         cleaned_data={
@@ -130,12 +133,14 @@ def test_series_schedule_creation_generates_multiple_records(user, student, serv
 def test_completion_deducts_hours_and_records_owed(user, student, service_plan):
     service_plan.remaining_hours = Decimal("1.00")
     service_plan.save(update_fields=["remaining_hours"])
+    local_tomorrow = timezone.localtime(timezone.now() + timezone.timedelta(days=1))
+    start_at = local_tomorrow.replace(hour=14, minute=0, second=0, microsecond=0)
     schedule = Schedule.objects.create(
         student=student,
         service_plan=service_plan,
         owner=user,
         title="待完成课程",
-        start_at=timezone.now() + timezone.timedelta(hours=2),
+        start_at=start_at,
         duration_hours=Decimal("1.50"),
         status=Schedule.Status.PENDING,
         delivery_mode=Schedule.DeliveryMode.ONLINE,
@@ -188,28 +193,30 @@ def test_receivable_status_updates_from_multiple_entries(user, student, service_
 
 @pytest.mark.django_db
 def test_reminder_scans_create_course_and_receivable_tasks(user, student, service_plan):
-    Schedule.objects.create(
-        student=student,
-        service_plan=service_plan,
-        owner=user,
-        title="临近课程",
-        start_at=timezone.now() + timezone.timedelta(minutes=30),
-        duration_hours=Decimal("0.50"),
-        status=Schedule.Status.PENDING,
-        delivery_mode=Schedule.DeliveryMode.ONLINE,
-    )
-    Receivable.objects.create(
-        student=student,
-        service_plan=service_plan,
-        title="测试应收",
-        amount_due=Decimal("500.00"),
-        issue_date=timezone.localdate(),
-        due_date=timezone.localdate(),
-        created_by=user,
-    )
-    assert scan_course_reminders() == 1
-    assert scan_receivable_reminders() == 1
-    assert set(ReminderTask.objects.values_list("reminder_type", flat=True)) == {"course", "receivable"}
+    mock_now = timezone.make_aware(timezone.datetime(2026, 5, 27, 14, 0, 0), timezone.get_current_timezone())
+    with patch("django.utils.timezone.now", return_value=mock_now):
+        Schedule.objects.create(
+            student=student,
+            service_plan=service_plan,
+            owner=user,
+            title="临近课程",
+            start_at=mock_now + timezone.timedelta(minutes=30),
+            duration_hours=Decimal("0.50"),
+            status=Schedule.Status.PENDING,
+            delivery_mode=Schedule.DeliveryMode.ONLINE,
+        )
+        Receivable.objects.create(
+            student=student,
+            service_plan=service_plan,
+            title="测试应收",
+            amount_due=Decimal("500.00"),
+            issue_date=timezone.localdate(),
+            due_date=timezone.localdate(),
+            created_by=user,
+        )
+        assert scan_course_reminders() == 1
+        assert scan_receivable_reminders() == 1
+        assert set(ReminderTask.objects.values_list("reminder_type", flat=True)) == {"course", "receivable"}
 
 
 @pytest.mark.django_db
@@ -277,3 +284,57 @@ def test_student_management_create_flow(client, user):
     list_response = client.get(reverse("students:list"))
     assert list_response.status_code == 200
     assert "新学员" in list_response.content.decode("utf-8")
+
+
+@pytest.mark.django_db
+def test_schedule_outside_working_hours_validation(user, student, service_plan):
+    local_tomorrow = timezone.localtime(timezone.now() + timezone.timedelta(days=1))
+
+    # 1. Start time too early (e.g., 8:00 AM local time)
+    early_start = local_tomorrow.replace(hour=8, minute=0, second=0, microsecond=0)
+    schedule_early = Schedule(
+        student=student,
+        service_plan=service_plan,
+        owner=user,
+        title="太早的课程",
+        start_at=early_start,
+        duration_hours=Decimal("1.00"),
+        status=Schedule.Status.PENDING,
+        delivery_mode=Schedule.DeliveryMode.ONLINE,
+    )
+    with pytest.raises(ValidationError) as excinfo:
+        schedule_early.full_clean()
+    assert "排课时间必须在工作时间（9:00 - 21:00）范围内。" in str(excinfo.value)
+
+    # 2. End time too late (e.g., starts at 8:30 PM local time, lasts 1 hour -> ends at 9:30 PM)
+    late_start = local_tomorrow.replace(hour=20, minute=30, second=0, microsecond=0)
+    schedule_late = Schedule(
+        student=student,
+        service_plan=service_plan,
+        owner=user,
+        title="太晚的课程",
+        start_at=late_start,
+        duration_hours=Decimal("1.00"),
+        status=Schedule.Status.PENDING,
+        delivery_mode=Schedule.DeliveryMode.ONLINE,
+    )
+    with pytest.raises(ValidationError) as excinfo:
+        schedule_late.full_clean()
+    assert "排课时间必须在工作时间（9:00 - 21:00）范围内。" in str(excinfo.value)
+
+    # 3. Spans across days (e.g., starts at 10:00 PM local time, lasts 2 hours -> ends at 12:00 AM next day)
+    cross_day_start = local_tomorrow.replace(hour=22, minute=0, second=0, microsecond=0)
+    schedule_cross = Schedule(
+        student=student,
+        service_plan=service_plan,
+        owner=user,
+        title="跨天课程",
+        start_at=cross_day_start,
+        duration_hours=Decimal("2.00"),
+        status=Schedule.Status.PENDING,
+        delivery_mode=Schedule.DeliveryMode.ONLINE,
+    )
+    with pytest.raises(ValidationError) as excinfo:
+        schedule_cross.full_clean()
+    assert "排课时间必须在工作时间（9:00 - 21:00）范围内。" in str(excinfo.value)
+

@@ -145,12 +145,14 @@ def test_generate_feedback_api(mock_create, mock_feedback_response, client, user
     mock_create.return_value = mock_feedback_response
 
     # 创建一个排课记录
+    local_tomorrow = timezone.localtime(timezone.now() + timezone.timedelta(days=1))
+    start_at = local_tomorrow.replace(hour=14, minute=0, second=0, microsecond=0)
     schedule = Schedule.objects.create(
         student=student,
         service_plan=service_plan,
         owner=user,
         title="数学课",
-        start_at=timezone.now(),
+        start_at=start_at,
         duration_hours=2.0,
         status=Schedule.Status.COMPLETED
     )
@@ -203,6 +205,12 @@ def test_verify_schedule_conflicts_tool(student, user, service_plan):
     start_at = "2026-06-03T15:00:00"
     res = verify_schedule_conflicts(student_id=student.id, start_at=start_at, duration_hours=2.0, owner_id=user.id)
     assert res["has_conflict"] is False
+    assert res["outside_working_hours"] is False
+
+    # 构造一个在工作时间外的排课
+    start_at_early = "2026-06-03T08:00:00"
+    res_early = verify_schedule_conflicts(student_id=student.id, start_at=start_at_early, duration_hours=2.0, owner_id=user.id)
+    assert res_early["outside_working_hours"] is True
 
     # 创建一个排课记录以制造冲突
     from schedules.models import Schedule
@@ -275,12 +283,14 @@ def test_student_portrait_api(mock_create, client, user, student, service_plan):
     mock_create.return_value = response_mock
 
     # 创建一个排课记录和课后备注
+    local_tomorrow = timezone.localtime(timezone.now() + timezone.timedelta(days=1))
+    start_at = local_tomorrow.replace(hour=14, minute=0, second=0, microsecond=0)
     schedule = Schedule.objects.create(
         student=student,
         service_plan=service_plan,
         owner=user,
         title="数学课",
-        start_at=timezone.now(),
+        start_at=start_at,
         duration_hours=2.0,
         status=Schedule.Status.COMPLETED
     )
