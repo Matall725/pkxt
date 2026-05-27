@@ -6,7 +6,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <style>
     .dash-shell { display: grid; gap: 20px; }
-    .kpi-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px; }
+    .kpi-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
     .kpi-card { padding: 20px; display: grid; gap: 16px; }
     .kpi-head, .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
     .kpi-head strong { font-size: 0.95rem; color: var(--text-base); }
@@ -20,34 +20,6 @@
     .kpi-note { color: var(--text-base); font-size: 0.9rem; }
     .kpi-note .up { color: var(--green); font-weight: 800; }
     .kpi-note .down { color: var(--red); font-weight: 800; }
-
-    .shortcut-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 16px; }
-    .shortcut-card {
-        padding: 20px;
-        display: grid;
-        gap: 14px;
-        align-content: start;
-        min-height: 176px;
-    }
-    .shortcut-icon {
-        width: 48px;
-        height: 48px;
-        border-radius: 16px;
-        display: grid;
-        place-items: center;
-        font-size: 1.1rem;
-        color: #fff;
-    }
-    .shortcut-icon.blue { background: linear-gradient(135deg, #5ea8ff 0%, #2f6df6 100%); }
-    .shortcut-icon.teal { background: linear-gradient(135deg, #6fd7d1 0%, #25b7b2 100%); }
-    .shortcut-icon.orange { background: linear-gradient(135deg, #ffca76 0%, #ff9c2f 100%); }
-    .shortcut-icon.green { background: linear-gradient(135deg, #62d89b 0%, #14ae5c 100%); }
-    .shortcut-icon.purple { background: linear-gradient(135deg, #b7a1ff 0%, #8b6cf7 100%); }
-    .shortcut-title { font-size: 1rem; font-weight: 800; color: var(--text-base); }
-    .shortcut-desc { font-size: 0.88rem; line-height: 1.6; color: var(--text-soft); }
-    .shortcut-meta { font-size: 0.82rem; font-weight: 800; color: var(--text-faint); }
-    .shortcut-action { margin-top: auto; }
-    .shortcut-action form { margin: 0; }
 
     .panel-grid { display: grid; grid-template-columns: 1.18fr 0.95fr; gap: 20px; }
     .panel { padding: 22px; }
@@ -179,14 +151,13 @@
 
     @media (max-width: 1400px) {
         .kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-        .shortcut-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     }
     @media (max-width: 1200px) {
         .panel-grid, .bottom-grid { grid-template-columns: 1fr; }
         .note-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
     @media (max-width: 768px) {
-        .kpi-grid, .shortcut-grid, .export-grid, .note-grid { grid-template-columns: 1fr; }
+        .kpi-grid, .export-grid, .note-grid { grid-template-columns: 1fr; }
         .lesson-row, .reminder-row { grid-template-columns: 1fr; }
         .table-shell thead { display: none; }
         .table-shell tbody, .table-shell tr, .table-shell td { display: block; width: 100%; }
@@ -205,11 +176,6 @@
             <div class="kpi-note">较昨日 <span class="{% if today_totals.delta >= 0 %}up{% else %}down{% endif %}">{% if today_totals.delta >= 0 %}+{% endif %}{{ today_totals.delta }}</span></div>
         </article>
         <article class="board-card kpi-card">
-            <div class="kpi-head"><span class="kpi-icon teal"><i class="bi bi-people"></i></span><strong>活跃学员</strong></div>
-            <div class="kpi-value">{{ active_students_count }}</div>
-            <div class="kpi-note">潜在线索 {{ lead_students_count }} 人</div>
-        </article>
-        <article class="board-card kpi-card">
             <div class="kpi-head"><span class="kpi-icon orange"><i class="bi bi-coin"></i></span><strong>待收款金额</strong></div>
             <div class="kpi-value">¥ {{ outstanding_total|floatformat:2 }}</div>
             <div class="kpi-note">未结清应收 {{ open_receivables_count }} 笔</div>
@@ -219,66 +185,39 @@
             <div class="kpi-value">¥ {{ month_received_total|floatformat:2 }}</div>
             <div class="kpi-note">本月到账 {{ month_received_count }} 笔</div>
         </article>
-        <article class="board-card kpi-card">
-            <div class="kpi-head"><span class="kpi-icon purple"><i class="bi bi-bell"></i></span><strong>待提醒事项</strong></div>
-            <div class="kpi-value">{{ pending_reminders_count }}</div>
-            <div class="kpi-note">课程提醒与待收款提醒</div>
-        </article>
     </section>
 
-    <section class="shortcut-grid">
-        <article class="board-card shortcut-card">
-            <div class="shortcut-icon blue"><i class="bi bi-person-plus"></i></div>
-            <div class="shortcut-title">新增学员</div>
-            <div class="shortcut-desc">直接创建学员档案，并在同页录入服务方案。</div>
-            <div class="shortcut-meta">当前活跃 {{ active_students_count }} 人</div>
-            <div class="shortcut-action"><a class="ghost-button w-100" href="{% url 'students:create' %}">立即新建</a></div>
-        </article>
-
-        <article class="board-card shortcut-card">
-            <div class="shortcut-icon teal"><i class="bi bi-calendar-plus"></i></div>
-            <div class="shortcut-title">快速排课</div>
-            <div class="shortcut-desc">新建单次或系列课程，直接进入排课表单。</div>
-            <div class="shortcut-meta">今日日程 {{ today_totals.all }} 节</div>
-            <div class="shortcut-action"><a class="ghost-button w-100" href="{% url 'schedules:create' %}">去排课</a></div>
-        </article>
-
-        <article class="board-card shortcut-card">
-            <div class="shortcut-icon orange"><i class="bi bi-wallet2"></i></div>
-            <div class="shortcut-title">登记应收</div>
-            <div class="shortcut-desc">新增应收记录，并继续追加多笔实收流水。</div>
-            <div class="shortcut-meta">待结清 {{ open_receivables_count }} 笔</div>
-            <div class="shortcut-action"><a class="ghost-button w-100" href="{% url 'payments:create' %}">去登记</a></div>
-        </article>
-
-        <article class="board-card shortcut-card">
-            <div class="shortcut-icon green"><i class="bi bi-bell"></i></div>
-            <div class="shortcut-title">扫描提醒</div>
-            <div class="shortcut-desc">立即生成课程提醒和待收款提醒，不用先进入提醒中心。</div>
-            <div class="shortcut-meta">当前待处理 {{ pending_reminders_count }} 条</div>
-            <div class="shortcut-action">
-                <form method="post" action="{% url 'reminders:scan' %}">
-                    {% csrf_token %}
-                    <button class="ghost-button w-100" type="submit">立即扫描</button>
-                </form>
+    <!-- 快速操作栏 -->
+    <section class="board-card p-3">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-primary-subtle text-primary p-2 rounded-circle"><i class="bi bi-lightning-fill"></i></span>
+                <strong class="text-dark">快速操作</strong>
             </div>
-        </article>
-
-        <article class="board-card shortcut-card">
-            <div class="shortcut-icon purple"><i class="bi bi-bar-chart"></i></div>
-            <div class="shortcut-title">报表中心</div>
-            <div class="shortcut-desc">导出学员、课时、收款数据和固定格式模板。</div>
-            <div class="shortcut-meta">支持 CSV / Excel</div>
-            <div class="shortcut-action"><a class="ghost-button w-100" href="{% url 'dashboard:reports' %}">打开报表</a></div>
-        </article>
-
-        <article class="board-card shortcut-card">
-            <div class="shortcut-icon blue"><i class="bi bi-gear"></i></div>
-            <div class="shortcut-title">后台设置</div>
-            <div class="shortcut-desc">进入管理后台查看系统配置和底层数据入口。</div>
-            <div class="shortcut-meta">单账号工作台</div>
-            <div class="shortcut-action"><a class="ghost-button w-100" href="/admin/">打开后台</a></div>
-        </article>
+            <div class="d-flex flex-wrap gap-2">
+                <a class="btn btn-sm btn-outline-primary px-3 py-2 rounded-pill" href="{% url 'students:create' %}">
+                    <i class="bi bi-person-plus me-1"></i> 新增学员
+                </a>
+                <a class="btn btn-sm btn-outline-primary px-3 py-2 rounded-pill" href="{% url 'schedules:create' %}">
+                    <i class="bi bi-calendar-plus me-1"></i> 快速排课
+                </a>
+                <a class="btn btn-sm btn-outline-primary px-3 py-2 rounded-pill" href="{% url 'payments:create' %}">
+                    <i class="bi bi-wallet2"></i> 登记应收
+                </a>
+                <form method="post" action="{% url 'reminders:scan' %}" class="d-inline">
+                    {% csrf_token %}
+                    <button class="btn btn-sm btn-outline-primary px-3 py-2 rounded-pill" type="submit">
+                        <i class="bi bi-bell me-1"></i> 扫描提醒
+                    </button>
+                </form>
+                <a class="btn btn-sm btn-outline-secondary px-3 py-2 rounded-pill" href="{% url 'dashboard:reports' %}">
+                    <i class="bi bi-bar-chart me-1"></i> 报表中心
+                </a>
+                <a class="btn btn-sm btn-outline-secondary px-3 py-2 rounded-pill" href="/admin/">
+                    <i class="bi bi-gear me-1"></i> 后台设置
+                </a>
+            </div>
+        </div>
     </section>
 
     <section class="panel-grid">
